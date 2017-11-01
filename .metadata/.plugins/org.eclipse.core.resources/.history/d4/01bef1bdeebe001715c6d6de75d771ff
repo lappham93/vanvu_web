@@ -1,0 +1,373 @@
+var App = {
+	errors: {
+		INVALID_TOKEN: {value: -108, msg: "Invalid Token"}, PARAMS_INVALID: {value: -101, msg: "Param Invalid"}, MISSING_PARAM: {value: -200, msg: "Please fill out all required fields!"},
+		USERNAME_EXIST: {value: -119, msg: "Your email has been registered already."},
+		LIMIT_ADDRESS: {value: -322, msg: "Limit Address"}, STATE_INVALID: {value: -323, msg: "State Invalid"}, ZIPCODE_INVALID: {value: -324, msg: "Invalid ZipCode"}, ADDRESS_NOT_EXIST: {value: -325, msg: "Address Not Exist"},
+		ITEM_NOT_FOUND: {value: -206, msg: "Item Not Found"}, LIMIT_SKU: {value: -504, msg: "Cart is full"}, LIMIT_QUANTITY: {value: -505, msg: "Cart is full"}, SOLD_OUT: {value: -326, msg: "Product is out of stock"},	
+		INVALID_CHECKOUT_TOKEN: {value: -522, msg: "Checkout is expired. Please try again!"}, SHIPPING_OPTION_NOT_EXIST: {value: -523, msg: "Shipping option is invalid"}, INVALID_PAYMENT_OPTION: {value: -524, msg: "Payment method is invalid"}, INVALID_PROMO_CODE: {value: -528, msg: "Promotion Code is invalid"}, BILLING_ADDRESS_NOT_EXIST: {value: -302, msg: "Billing address is invalid"}, INVALID_CARD_NUMBER: {value: -303, msg: "Cart number is invalid"}, INVALID_CARD_CODE: {value: -304, msg: "Cart Code is invalid"}, INVALID_EXPIRATION_DATE: {value:-305, msg: "Cart is expired"}, PAYMENT_ERROR: {value: -317, msg: "Payment error"}, CANT_USE_PROMO: {value: -530, msg: "Promotion Code is not applied for your cart."},
+		BAN: {value: -107, msg: "Your account has been blocked. Please contact to admin for detail!"},
+		SERVER_ERROR: {value: -1, msg: "Server Error"}
+	},
+		
+	uris: {
+		login: '/login',
+		loginSocial: '/login/social',
+		loginEmail: '/login/email',
+		loginRefreshToken: '/login/token',
+		register: '/register',
+		registerSocial: '/register/social',
+		registerEmail: '/register/email',
+		logout: '/logout',
+		
+		state: '/address/state',
+		shippingAddress: '/address/shippingAddress',
+		shippingAddressList: '/address/shippingAddress/list',
+		shippingAddressItem: '/address/shippingAddress/item',
+		billingAddress: '/address/billingAddress',
+		billingAddressList: '/address/billingAddress/list',
+		billingAddressItem: '/address/billingAddress/item',
+		
+		cart: '/cart',
+		cartList: '/cart/list',
+		cartItem: '/cart/item',
+		cartMini: '/cart/mini',
+		
+		checkout: '/checkout',
+		checkoutPayment: '/checkout/payment',
+		checkoutPromotion: '/checkout/promotion',
+		checkoutConfirm: '/checkout/confirm',
+		checkoutPaypal: '/checkout/paypal',
+		checkoutPaypalCreatePayment: '/checkout/paypal/create-payment',
+		checkoutPaypalExePayment: '/checkout/paypal/execute-payment',
+		
+		wishlist: '/wishlist',
+		wishlistItem: '/wishlist/item',
+		
+		order: '/order',
+		orderItem: '/order/detail',
+		
+		profile: '/profile',
+		password: '/profile/password',
+		forgotPassword: '/login/password/forgot',
+		
+		contact: '/contactus',
+		
+		home: '/index',
+		product: '/product',
+		producItem: '/product/item/detail'
+	},
+
+	getFullUri: function(uri) {
+		return App.sitePrefix + uri;
+	},
+	
+	logged: false,
+	
+	paging: null,
+	
+	params: "",
+		
+	sitePrefix: '',
+	
+	resourcePath: '',
+	
+	loginType: {ACCOUNT_KIT: 1, GOOGLE: 3},
+	
+	photoType: {SERVICE: 1, FEED: 2, BANNER: 8, DOCUMENT: 11},
+	
+	updateType: {INFO: 1, PHOTO: 2, OTHER: 3},
+	
+	dynamicPaging: {target: "", total: 0},
+	
+	errMsg: {SERVER_ERR: "We are so sorry. Something went wrong!"},
+		
+	ajaxRequest: function(method, url, data, callback, noAnimate) {
+		data = JSON.stringify(data);
+		$.ajax({
+	    	  headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+	    	  url: url,
+	    	  method: method,
+	    	  dataType: 'json',
+	    	  data: data,
+	    	  beforeSend: function () {
+	    		  if (!noAnimate) {
+	    			  $("#loadingModal").show();
+	    		  }
+              },
+              complete: function () {
+            	  if (!noAnimate) {
+            		  $("#loadingModal").hide();
+            	  }
+              },
+	    	  success: callback,
+	    	  error: function(httpObj) {
+	    		  var msg = "Server Error";
+	    		  if (httpObj.status == 401) {
+	    			  msg = "You must login before doing this action!";
+	    			  App.redirect(App.uris.login);
+	    			  return;
+	    		  }
+	    		  $.notify('danger', msg);
+	    	  }
+		});
+	},
+	
+	sajaxRequest: function(method, url, data, callback) {
+		data = JSON.stringify(data);
+		$.ajax({
+			headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+			url: url,
+			method: method,
+			dataType: 'json',
+			data: data,
+			async: false,
+			beforeSend: function () {
+		        $("#loadingModal").show();
+            },
+            complete: function () {
+                $("#loadingModal").hide();
+            },
+            success: callback,
+            error: function(httpObj) {
+    		  	var msg = "Server Error";
+    		  	if (httpObj.status == 401) {
+    		  		msg = "You must login before doing this action!";
+		  			App.redirect(App.uris.login);
+		  			return;
+    		  	}
+    		  	$.notify('danger', msg);
+            }
+		});
+	},
+	
+	ajaxUploadPhotoRequest: function(type, files, successCallback, errorCallback) {
+		var data = new FormData();
+        data.append("type", type);
+        $.each(files, function(key, value) {
+        	data.append("photos", value);
+        })
+		$.ajax({
+	        url: App.sitePrefix + "/upload/photo",
+	        type: 'POST',
+	        data: data,
+	        cache: false,
+	        dataType: 'json',
+	        processData: false, // Don't process the files
+	        contentType: false, // Set content type to false as jQuery will tell the server its a query string request
+	        success: successCallback,
+	        error: errorCallback,
+	        async: false
+		})
+	},
+	
+	initAjaxRequest: function(formEle) {
+		var errorMsg = $(formEle).find('.form-error');
+		var successMsg = $(formEle).find('.form-success');
+		var warningMsg = $(formEle).find('.form-warning');
+		$(errorMsg).hide();
+		$(successMsg).hide();
+		$(warningMsg).hide();
+	},
+	
+	callbackAjaxRequest: function(resp, errors, redirectUri, msgSuccess, msgError) {
+		if (resp.code >= 0) {
+			var msg = (msgSuccess) ? msgSuccess : "Success";
+			$.notify('success', msg, function() {
+				if (redirectUri) {
+					App.redirect(redirectUri);
+				}
+			});
+		} else {
+			var msg = "";
+			if (msgError) {
+				msg = msgError;
+			} else {
+				msg = "Server error";
+				try {
+					for (var i = 0; i < errors.length; i++) {
+						if (resp.code == errors[i].value) {
+							msg = errors[i].msg;
+							break;
+						}
+					}
+				} catch (err) {
+					msg = "Server error";
+				}
+			}
+			$.notify('danger', msg);
+			console.log('code = ' + resp.code);
+		}
+	},
+
+	redirect: function(uri) {
+		window.location.replace(this.sitePrefix + uri);
+	},
+	
+	reload: function() {
+		window.location.reload();
+	},
+	
+	animateSelect: function(ele) {
+		$(ele).select2();
+	}, 
+	
+	animateSwitch: function(ele) {
+		var parent = $(ele).parent();
+		var grand = $(parent).parent();
+		if ($(grand).hasClass("bootstrap-switch")) {
+			var active = $(ele).prop("checked");
+			if (active && $(grand).hasClass("bootstrap-switch-off")) {
+				$(grand).removeClass("bootstrap-switch-off");
+				$(grand).addClass("bootstrap-switch-on");
+				$(parent).css("margin-left", "0px");
+			} else if (!active && $(grand).hasClass("bootstrap-switch-on")) {
+				$(grand).removeClass("bootstrap-switch-on");
+				$(grand).addClass("bootstrap-switch-off");
+				$(parent).css("margin-left", "-50px");
+			}
+		}
+		$(ele).bootstrapSwitch();
+	},
+	
+	animateMultiSelect: function(ele) {
+		var parent = $(ele).parent();
+		var eleRmv = $(parent).children('.btn-group');
+		$(eleRmv).remove();
+		$(ele).data('multiselect', null);
+		$(ele).multiselect({
+	        includeSelectAllOption: true,
+	        enableFiltering: true,
+	        templates: {
+	            filter: '<li class="multiselect-item multiselect-filter"><i class="icon-search4"></i> <input class="form-control" type="text"></li>'
+	        },
+	        onSelectAll: function() {
+	            $.uniform.update();
+	        }
+	    });
+	},
+	
+	files: [],
+	
+	//@param date: mm/dd/yyyy
+	getValidDateFormat: function(date) {
+		return date.substring(6, 10) +  "-" + date.substring(0, 2) + "-" + date.substring(3, 5);
+	},
+	
+	addCookie: function(cname, cvalue, expireMilis) {
+		var d = new Date();
+		d.setTime(d.getTime() + expireMilis);
+		var expires = "expires=" + d.toUTCString();
+		document.cookie = cname + "=" + cvalue + ";" + expires;
+	},
+	
+	getCookie: function(cname) {
+		var name = cname + "=";
+	    var decodedCookie = decodeURIComponent(document.cookie);
+	    var ca = decodedCookie.split(';');
+	    for(var i = 0; i <ca.length; i++) {
+	        var c = ca[i];
+	        while (c.charAt(0) == ' ') {
+	            c = c.substring(1);
+	        }
+	        if (c.indexOf(name) == 0) {
+	            return c.substring(name.length, c.length);
+	        }
+	    }
+	    return "";
+	},
+	
+	set2List: function(sourceSet) {
+		var target = []
+		if (sourceSet != null) {
+			sourceSet.forEach(function(ele) {
+				target.push(ele);
+			})
+		}
+		return target;
+	},
+	
+	cloneSet: function(sourceSet) {
+		var target = new Set();
+		return App.appendSet(target, sourceSet);
+	},
+	
+	appendSet: function(target, sourceSet) {
+		if (sourceSet != null) {
+			sourceSet.forEach(function(ele){
+				target.add(ele);
+			});
+		}
+		return target;
+	},
+	
+	cloneMap: function(sourceMap) {
+		var target = {};
+		return App.appendMap(target, sourceMap);
+	}, 
+	
+	appendMap: function(target, sourceMap) {
+		if (sourceMap != null) {
+			for (var key in sourceMap){
+				target[key] = sourceMap[key];
+			};
+		}
+		return target;
+	},
+	
+	showMessage: function(message, callback) {
+		App.hideLoader();
+		bootbox.dialog({
+	        message: message,
+	        buttons: {
+	            "success" : {
+	                "label" : "OK",
+	                "className" : "btn-sm btn-primary",
+	                "callback": callback
+	            }
+	        }
+	    });
+	},
+	
+	showLoader: function(container) {
+		if (container) {
+			$(container + ' .loader').show();
+		} else {
+			$('.loader').show();
+		}
+		$('body').prop("disabled", true);
+	},
+	
+	hideLoader: function(container) {
+		if (container) {
+			$(container + ' .loader').hide();
+		} else {
+			$('.loader').hide();
+		}
+		$('body').prop("disabled", false);
+	}, 
+	
+	validateEmail: function(email) {
+	    var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+	    return re.test(email);
+	},
+	
+	formatMoney: function() {
+		$('.money').each(function(){
+			var fm = Number($(this).text().replace(/[$,]+/g,"")).toLocaleString('en-US');
+			$(this).text(fm);
+		})
+	},
+	
+	formatNumber: function() {
+		$('.number').each(function(){
+			var fm = Number($(this).text().replace(/[$,]+/g,"")).toLocaleString('en-US');
+			$(this).text(fm);
+		})
+	}
+};
+
+$(function(){
+	App.formatMoney();
+	App.formatNumber();
+});
+

@@ -1,0 +1,36 @@
+package com.mit.sessions;
+
+public class CheckoutSession {
+	private long shippingAddressId;
+	private long billingAddressId;
+	private String promoCode;
+	
+	public CheckoutSession() {
+		super();
+	}
+
+	public long getShippingAddressId() {
+		return shippingAddressId;
+	}
+
+	public void setShippingAddressId(long shippingAddressId) {
+		this.shippingAddressId = shippingAddressId;
+	}
+
+	public long getBillingAddressId() {
+		return billingAddressId;
+	}
+
+	public void setBillingAddressId(long billingAddressId) {
+		this.billingAddressId = billingAddressId;
+	}
+
+	public String getPromoCode() {
+		return promoCode;
+	}
+
+	public void setPromoCode(String promoCode) {
+		this.promoCode = promoCode;
+	}
+
+}

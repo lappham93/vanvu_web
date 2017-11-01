@@ -1,0 +1,57 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/forgot_password.js'"></script>
+</head>
+<body>
+	<div layout:fragment="content">
+		<!-- Inner Page Banner Area Start Here -->
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>Login</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + ''}">Home</a> /</li>
+		                        <li>Forgot Password</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		<div class="login-registration-page-area" style="padding-top: 30px;">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12"></div>
+		            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+		                <div class="login-registration-field">
+		                    <h2>Forgot Your Password</h2>
+		                    <p>Enter the e-mail address associated with your account. Click submit to have your password e-mailed to you.</p>
+		                    <form id="forgotPasswordFrmId" class="form-horizontal">
+		                        <fieldset>
+		                            <legend>Your E-Mail Address <b class="required required-symbol" style="color: red;">*</b></legend>
+		                            <div class="form-group">
+		                                <div class="col-sm-12">
+		                                    <input type="email" name="email" placeholder="Email Address" id="emailIptId" class="form-control" required="required"/>
+		                                </div>
+		                            </div>
+		                        </fieldset>
+		
+		                        <div class="buttons clearfix">
+		                            <div class="pull-left">
+		                                <input type="submit" class="btn-send-message disabled" value="Submit" style="height: 50px;" />
+		                            </div>
+		                        </div>
+		                    </form>
+		                </div>
+		            </div>
+		            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12"></div>
+		        </div>
+		    </div>
+		</div>
+	</div>
+</body>
+</html>

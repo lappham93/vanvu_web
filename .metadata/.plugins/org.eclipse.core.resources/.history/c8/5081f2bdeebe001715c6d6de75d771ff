@@ -1,0 +1,35 @@
+$(function () {
+    $('#profileFrmId').submit(function(e) {
+    	var id = $('#addressIdIptId').val();
+    	var email = $('#emailIptId').val();
+    	if (!App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+    	var firstName = $('#firstNameIptId').val();
+    	var lastName = $('#lastNameIptId').val();
+    	var phone = $('#phoneIptId').val();
+    	var phoneCode = $('#phoneCodeSltId').val();
+    	var countryCode = $('#countrySltId').val();
+    	var country = $('#countrySltId option[value="' + countryCode + '"]').text();
+		var data = {
+				  "address": {
+					    "country": country,
+					    "countryCode": countryCode,
+					  },
+					  "email": email,
+					  "firstName": firstName,
+					  "lastName": lastName,
+					  "phone": phone,
+					  'countryCode':phoneCode
+					}
+		var url = App.getFullUri(App.uris.profile);
+		App.ajaxRequest('PUT', url, data, function(resp) {
+			var errors = [];
+			App.callbackAjaxRequest(resp, errors, App.uris.profile);
+		});
+		
+		return false;
+	});
+
+});

@@ -1,0 +1,78 @@
+package com.mit.controllers;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.common.enums.ObjectType;
+import com.mit.define.ApiError;
+import com.mit.errcode.SocialErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.react.bodies.LikeBody;
+import com.mit.react.entities.UserStat;
+import com.mit.react.enums.ReactAction;
+import com.mit.react.repositories.UserStatRepo;
+import com.mit.react.responses.LikeResponse;
+import com.mit.react.services.ReactService;
+import com.mit.session.entities.UserSession;
+import com.mit.utils.ControllerUtils;
+
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
+@Api(value = "WishList Api")
+@RestController
+@RequestMapping(value = "/wishlist")
+public class HomeController {
+	@Autowired
+	private ReactService reactService;
+	@Autowired
+	private UserStatRepo userStatRepo;
+
+	@ApiOperation(value = "get list")
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView renderWishList(HttpServletRequest req) {
+		ModelAndView mav = ControllerUtils.initPage("wishlist", null, "isWishlist");
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = reactService.getWishList(us.getUserId(), us.getProfileType(), 0, 1000, ObjectType.SKU.getValue());
+        mav.addObject("wishlist", rs.get("wishList"));
+        return mav;
+	}
+
+	@ApiOperation(value = "add to wishlist item")
+	@RequestMapping(value = "/item", method = RequestMethod.POST)
+	public ApiResponse<Object> addToWishList(HttpServletRequest request,
+			@RequestBody LikeBody body) {
+		UserSession us = (UserSession) request.getAttribute("session");
+		body.setUserId(us.getUserId());
+		body.getObjectRef().setType(ObjectType.SKU.getValue());
+		body.setType(ReactAction.ADD.getValue());
+		Map<String, Object> likeMap = reactService.like(body);
+		int err = (int) likeMap.get("err");
+		if (err == SocialErrCode.SUCCESS) {
+			UserStat userStat = userStatRepo.getByUserId(us.getUserId(), true);
+			return new ApiResponse<>(userStat.getProductIds().size());
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+
+	@ApiOperation(value = "remove wishlist item")
+	@RequestMapping(value = "/item/{objectId}", method = RequestMethod.DELETE)
+	public ApiResponse<Object> removeFromWishList(HttpServletRequest request,
+			@PathVariable(value = "objectId") long objectId) {
+		UserSession us = (UserSession) request.getAttribute("session");
+		int err = reactService.removeWishListItem(us.getUserId(), ObjectType.SKU.getValue(), objectId);
+		if (err == SocialErrCode.SERVER_ERR) {
+			return new ApiResponse<>(ApiError.SERVER_ERROR);
+		}
+		return new ApiResponse<>();
+	}
+}

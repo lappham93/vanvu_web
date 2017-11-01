@@ -1,0 +1,43 @@
+$(function(){
+	$('#passwordFrmId').submit(function(e){
+		var currentPassword = $('#currentPasswordIptId').val();
+		var newPassword = $('#newPasswordIptId').val();
+		var newPasswordConfirm = $('#newPasswordConfirmIptId').val();
+		var data = {
+				'currentPassword': currentPassword, 
+				'newPassword': newPassword,
+				'newPasswordConfirm': newPasswordConfirm
+		};
+		var url = App.getFullUri(App.uris.password);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.PARAMS_INVALID];
+			App.callbackAjaxRequest(resp, errors, App.uris.password, "Change password successfully.", "");
+		});
+		
+		return false;
+	});
+});
+
+function checkLengthPassword() {
+    var password = $("#newPasswordIptId").val();
+    if (password.length < 6){
+        $("#error_length").show();
+    } else {
+        $("#error_length").hide();
+        if ($("#newPasswordConfirmIptId").val()) {
+        	checkPasswordMatch();
+        }
+    }
+    return false;
+};
+
+function checkPasswordMatch() {
+    var password = $("#newPasswordIptId").val();
+    var confirmPassword = $("#newPasswordConfirmIptId").val();
+    if (password != confirmPassword){
+        $("#error_match").show();
+    } else {
+        $("#error_match").hide();
+    }
+    return false;
+};

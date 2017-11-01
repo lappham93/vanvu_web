@@ -1,0 +1,135 @@
+var defaultCountry = "US";
+var defaultAddressId = 0;
+
+$(function () {
+	renderState($('#stateSltId'), defaultCountry);
+	
+    $('#countrySltId').change(function() {
+    	renderState($('#stateSltId'), $(this).val());
+    });
+
+    $('#addBAFrmId').submit(function(e) {
+    	var id = $('#addressIdIptId').val();
+    	var firstName = $('#firstNameIptId').val();
+    	var lastName = $('#lastNameIptId').val();
+    	var phone = $('#phoneIptId').val();
+    	var address1 = $('#address1IptId').val();
+    	var address2 = $('#address2IptId').val();
+    	var countryCode = $('#countrySltId').val();
+    	var country = $('#countrySltId option[value="' + countryCode + '"]').text();
+    	var stateCode = $('#stateSltId').val();
+    	var state = stateCode ? $('#stateSltId option[value="' + stateCode + '"]').text() : '';
+    	var city = $('#cityIptId').val();
+    	var zipCode = $('#zipCodeIptId').val();
+    	var isDefault = $('#defaultCbxId').prop('checked');
+		var data = {"addressLine1": address1,
+				  "addressLine2": address2,
+				  "checkoutToken": "",
+				  "city": city,
+				  "country": country,
+				  "countryCode": countryCode,
+				  "default": isDefault,
+				  "firstName": firstName,
+				  "lastName": lastName,
+				  "phone": phone,
+				  "state": state,
+				  "stateCode": stateCode,
+				  "zipCode": zipCode};
+		if (id && id > 0) {
+			var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+			App.ajaxRequest('PUT', url, data, function(resp) {
+				var errors = [App.errors.ADDRESS_NOT_EXIST, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.billingAddress);
+			});
+		} else {
+			var url = App.getFullUri(App.uris.billingAddressItem);
+			App.ajaxRequest('POST', url, data, function(resp) {
+				var errors = [App.errors.LIMIT_ADDRESS, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.billingAddress);
+			});
+		}
+		
+		return false;
+	});
+    
+    $('#billingAddressSltId').change(function() {
+    	var id = $(this).val();
+    	if (id) {
+    		$('#addDivId').hide();
+    		$('#updateDivId').show();
+	    	$('#addressIdIptId').val(id);
+	    	var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+	    	App.ajaxRequest('GET', url, "", function(resp) {
+	    		var address = resp.data;
+				if (address) {
+					$('#addressIdIptId').val(address.id);
+			    	$('#firstNameIptId').val(address.firstName);
+			    	$('#lastNameIptId').val(address.lastName);
+			    	$('#phoneIptId').val(address.phone);
+			    	$('#address1IptId').val(address.addressLine1);
+			    	$('#address2IptId').val(address.addressLine2);
+			    	$('#countrySltId').val(address.countryCode);
+			    	renderState($('#stateSltId'), address.countryCode, address.stateCode);
+			    	$('#cityIptId').val(address.city);
+			    	$('#zipCodeIptId').val(address.zipCode);
+			    	$('#defaultCbxId').prop('checked', address.isDefault);
+				}
+			});
+    	} else {
+    		switchAddBillingAddress();
+    	}
+    });
+    
+    $("#deleteBtnId").on('click', function () {
+        var id = $("#addressIdIptId").val();
+        var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+    	App.ajaxRequest('DELETE', url, "", function(resp) {
+    		App.callbackAjaxRequest(resp, null, App.uris.billingAddress);
+    	});
+    });
+
+    if (defaultAddressId > 0) {
+		$('#billingAddressSltId').val(defaultAddressId);
+		$('#billingAddressSltId').trigger('change');
+	} else {
+		$('#billingAddressSltId').val("");
+	}
+});
+
+function renderState($stateEle, countryCode, stateValue) {
+	var data = "";
+	$stateEle.html('<option disabled="disabled" selected="selected" value="">Select state</option>');
+	var url = App.getFullUri(App.uris.state + "?country=" + countryCode);
+	App.ajaxRequest('GET', url, data, function(resp) {
+		var states = resp.data;
+		for (var i=0; i < states.length; i++) {
+			var state = states[i];
+			$stateEle.append('<option value="' + state.code + '" style="text-align: center;">' + state.name + '</option>');
+		}
+		if (stateValue) {
+			$stateEle.val(stateValue);
+		}
+	});
+}
+
+function switchAddBillingAddress() {
+	$('#addDivId').show();
+	$('#updateDivId').hide();
+	$('#billingAddressSltId').val("");
+	resetBillingForm();
+}
+
+function resetBillingForm() {
+	$('#addressIdIptId').val("");
+	$('#addressIdIptId').val("");
+	$('#firstNameIptId').val("");
+	$('#lastNameIptId').val("");
+	$('#phoneIptId').val("");
+	$('#address1IptId').val("");
+	$('#address2IptId').val("");
+	$('#countrySltId').val(defaultCountry);
+	renderState($('#stateSltId'), defaultCountry);
+	$('#cityIptId').val("");
+	$('#zipCodeIptId').val("");
+	$('#defaultCbxId').prop('checked', false);
+}

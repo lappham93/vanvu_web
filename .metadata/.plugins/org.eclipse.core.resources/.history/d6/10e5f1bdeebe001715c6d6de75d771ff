@@ -1,0 +1,21 @@
+$(function(){
+	$('#forgotPasswordFrmId').submit(function(e){
+		var email = $('#emailIptId').val();
+		if (!App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+		var data = {
+				'email': email
+		};
+		var url = App.getFullUri(App.uris.forgotPassword);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.PARAMS_INVALID];
+			var msgErr = "Email is not existed.";
+			var msgSucc = "We have sent new password to your email.";
+			App.callbackAjaxRequest(resp, errors, App.uris.login, msgSucc, msgErr);
+		});
+		
+		return false;
+	});
+});

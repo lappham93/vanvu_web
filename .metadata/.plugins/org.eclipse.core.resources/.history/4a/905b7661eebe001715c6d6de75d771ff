@@ -1,0 +1,198 @@
+package com.mit.controllers;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.cart.bodies.CartItemBody;
+import com.mit.cart.responses.CartResponse;
+import com.mit.cart.services.CartService;
+import com.mit.define.ApiError;
+import com.mit.errcode.CartErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.react.bodies.CartNotifReceiveBody;
+import com.mit.react.services.ReactService;
+import com.mit.session.entities.UserSession;
+import com.mit.utils.ControllerUtils;
+
+import io.swagger.annotations.ApiOperation;
+
+/**
+ * Created by Hung on 8/9/2017.
+ */
+
+@RestController
+@RequestMapping("/cart")
+public class CartController {
+
+    @Autowired
+    private CartService cartService;
+    @Autowired
+    private ReactService reactService;
+    
+    @ApiOperation(value = "render cart")
+    @RequestMapping(value = "", method = RequestMethod.GET)
+    public ModelAndView renderCart(HttpServletRequest req) {
+    	ModelAndView mav = ControllerUtils.initPage("cart", null, "isCart");
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.getCart(us.getUserId(), us.getProfileType());
+        mav.addObject("cart", rs.get("cart"));
+        return mav;
+    }
+    
+    @ApiOperation(value = "render mini cart")
+    @RequestMapping(value = "/mini", method = RequestMethod.GET)
+    public ModelAndView renderMiniCart(HttpServletRequest req) {
+    	ModelAndView mav = ControllerUtils.initPage("cart_mini", null, "");
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.getCart(us.getUserId(), us.getProfileType());
+        mav.addObject("cart", rs.get("cart"));
+        return mav;
+    }
+
+    @ApiOperation(value = "Add cart item", notes = "Error codes = {PARAMS_INVALID(-101), ITEM_NOT_FOUND(-206), LIMIT_SKU(-504), LIMIT_QUANTITY(-505), SOLD_OUT(-326)};")
+    @RequestMapping(value = "/item", method = RequestMethod.POST)
+    public ApiResponse<CartResponse> addCartItem(HttpServletRequest req,
+                                                 @RequestBody CartItemBody body) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.addCartItem(us.getUserId(), us.getProfileType(), body.getSkuId(), body.getQuantity(), body.isGetCart());
+
+        int err = (int)rs.get("err");
+        if (err == CartErrCode.SUCCESS) {
+            return new ApiResponse<>((CartResponse) rs.get("cart"));
+        } 
+
+        if (err == CartErrCode.QUANTITY_INVALID) {
+            return new ApiResponse<>(ApiError.PARAMS_INVALID);
+        }
+        if (err == CartErrCode.SKU_NOT_EXIST) {
+            return new ApiResponse<>(ApiError.ITEM_NOT_FOUND);
+        }
+        if (err == CartErrCode.LIMIT_SKU) {
+            return new ApiResponse<>(ApiError.LIMIT_SKU);
+        }
+        if (err == CartErrCode.LIMIT_QUANTITY) {
+            return new ApiResponse<>(ApiError.LIMIT_QUANTITY);
+        }
+        if (err == CartErrCode.SOLD_OUT) {
+        	int qtyOnHand = (int) rs.get("qtyOnHand");
+        	ApiResponse<CartResponse> apiRs = new ApiResponse<>();
+        	CartResponse cartResponse = new CartResponse();
+        	cartResponse.setQtyOnHand(qtyOnHand);
+        	apiRs.setCode(ApiError.SOLD_OUT.getValue());
+        	apiRs.setData(cartResponse);
+        	return apiRs;
+        }
+        return new ApiResponse<>(ApiError.SERVER_ERROR);
+    }
+
+    @ApiOperation(value = "Update cart item", notes = "Error codes = {PARAMS_INVALID(-101), ITEM_NOT_FOUND(-206), LIMIT_SKU(-504), LIMIT_QUANTITY(-505), SOLD_OUT(-326)};")
+    @RequestMapping(value = "/item", method = RequestMethod.PUT)
+    public ApiResponse<CartResponse> putCartItem(HttpServletRequest req,
+                                                 @RequestBody CartItemBody body) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.updateCartItem(us.getUserId(), us.getProfileType(), body.getSkuId(), body.getQuantity(), body.isGetCart());
+
+        int err = (int)rs.get("err");
+        if (err == CartErrCode.SUCCESS) {
+            return new ApiResponse<>((CartResponse) rs.get("cart"));
+        }
+
+        if (err == CartErrCode.QUANTITY_INVALID) {
+            return new ApiResponse<>(ApiError.PARAMS_INVALID);
+        }
+        if (err == CartErrCode.SKU_NOT_EXIST) {
+            return new ApiResponse<>(ApiError.ITEM_NOT_FOUND);
+        }
+        if (err == CartErrCode.LIMIT_SKU) {
+            return new ApiResponse<>(ApiError.LIMIT_SKU);
+        }
+        if (err == CartErrCode.LIMIT_QUANTITY) {
+            return new ApiResponse<>(ApiError.LIMIT_QUANTITY);
+        }
+        if (err == CartErrCode.SOLD_OUT) {
+        	int qtyOnHand = (int) rs.get("qtyOnHand");
+        	ApiResponse<CartResponse> apiRs = new ApiResponse<>();
+        	CartResponse cartResponse = new CartResponse();
+        	cartResponse.setQtyOnHand(qtyOnHand);
+        	apiRs.setCode(ApiError.SOLD_OUT.getValue());
+        	apiRs.setData(cartResponse);
+        	return apiRs;
+        }
+        return new ApiResponse<>(ApiError.SERVER_ERROR);
+    }
+
+    @ApiOperation(value = "Remove cart item")
+    @RequestMapping(value = "/item/{id}", method = RequestMethod.DELETE)
+    public ApiResponse<CartResponse> removeCartItem(HttpServletRequest req,
+    		@PathVariable(value = "id") long skuId) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.removeCartItem(us.getUserId(), us.getProfileType(), skuId, true);
+
+        int err = (int)rs.get("err");
+
+        if (err == CartErrCode.SUCCESS) {
+            return new ApiResponse<>((CartResponse) rs.get("cart"));
+        } else {
+            return new ApiResponse<>(ApiError.SERVER_ERROR);
+        }
+    }
+
+    @ApiOperation(value = "Get cart")
+    @RequestMapping(value = "/list", method = RequestMethod.GET)
+    public ApiResponse<CartResponse> getCart(HttpServletRequest req) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.getCart(us.getUserId(), us.getProfileType());
+
+        int err = (int)rs.get("err");
+
+        if (err == CartErrCode.SUCCESS) {
+            return new ApiResponse<>((CartResponse) rs.get("cart"));
+        } else {
+            return new ApiResponse<>(ApiError.SERVER_ERROR);
+        }
+    }
+
+    @ApiOperation(value = "Clear cart")
+    @RequestMapping(value = "", method = RequestMethod.DELETE)
+    public ApiResponse<CartResponse> clearCart(HttpServletRequest req) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.clearCart(us.getUserId());
+
+        int err = (int)rs.get("err");
+
+        if (err == CartErrCode.SUCCESS) {
+            return new ApiResponse<>((CartResponse) rs.get("cart"));
+        } else {
+            return new ApiResponse<>(ApiError.SERVER_ERROR);
+        }
+    }
+
+    @ApiOperation(value = "Get cart size")
+    @RequestMapping(value = "/size", method = RequestMethod.GET)
+    public ApiResponse<CartResponse> getCartSize(HttpServletRequest req) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        Map<String, Object> rs = cartService.getCartSize(us.getUserId());
+
+        return new ApiResponse<>((CartResponse) rs.get("cart"));
+    }
+    
+    @ApiOperation(value = "Receive notif when product is available")
+    @RequestMapping(value = "/notif", method = RequestMethod.POST)
+    public ApiResponse<Object> receiveNotif(HttpServletRequest req, 
+    		@RequestBody CartNotifReceiveBody body) {
+        UserSession us = (UserSession)req.getAttribute("session");
+        body.setUserId(us.getUserId());
+        reactService.cartNotifReceive(body);
+
+        return new ApiResponse<>();
+    }
+}

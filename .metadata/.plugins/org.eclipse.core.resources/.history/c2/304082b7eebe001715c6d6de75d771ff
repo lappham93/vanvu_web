@@ -1,0 +1,626 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/checkout.js'"></script>
+	<script src="https://www.paypalobjects.com/api/checkout.js"></script>
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+		    var defaultSA = [[${defaultSA}]];
+		    var defaultBA = [[${defaultBA}]];
+		    if (defaultSA == null) {
+		    	activeSectionId = "shipping-info-section";
+		    } else if (defaultBA == null) {
+		    	activeSectionId = "billing-info-section";
+		    } else {
+		    	activeSectionId = "payment-info-section";
+		    }
+		    checkoutToken = [[${checkout != null ? checkout.checkoutToken : ''}]];
+		    checkoutPayment = [[${checkoutPayment}]];
+		/*]]>*/
+	</script>
+</head>
+<body>
+	<div layout:fragment="content" th:with="paymentCredit=1, paymentCod=2, paymentPaypal=3, paymentBank=5">
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>Checkout</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + '/index'}">Home</a> /</li>
+		                        <li>Checkout</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		
+		<div class="checkout-page-area" style="padding-top: 30px; padding-bottom: 0px;">
+		    <div class="container">
+		        <div class="col-lg-1 col-md-12 col-sm-12 col-xs-12"></div>
+		        <div class="col-lg-10 col-md-12 col-sm-12 col-xs-12">
+		        <div th:if="${cart != null and #lists.size(cart.cartItems) > 0}">
+			        <div id="checkout_content" class="width_setter group" role="main">
+			            <div id="cart" th:with="shippingCostUnk=${cart.totalPrice > 1500}">
+			                <div>
+			                    <div class="clearfix"></div>
+			                    <div id="order-summary-section" class="panel panel-default">
+			                        <div class="panel-heading">
+			                            <h4 class="panel-title">
+			                                <a href="#collapse-order-summary" data-toggle="collapse" data-parent="#accordion"
+			                                   class="accordion-toggle">Order Summary <i class="fa fa-caret-down"></i>
+			                                </a>
+			                                <a id="cartLink" class="" th:href="@{${site_prefix} + '/cart'}" style="margin-left: 10px;">
+			                                    <span style="color: #338ad8;">Edit</span>
+			                                </a>
+			                            </h4>
+			                        </div>
+			                        <div class="panel-collapse collapse in cart-page-area" id="collapse-order-summary" style="height: auto; padding: 0px;">
+			                            <div class="panel-body">
+			                                <div class="row">
+			                                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+			                                        <div class="cart-page-top table-responsive" style="margin-bottom: 0px;">
+			                                            <table id="cart_summary" class="table table-bordered table-hover">
+			                                                <thead>
+			                                                <tr>
+			                                                    <td class="cart-form-heading" style="width: 12%;"></td>
+			                                                    <td class="text-left" style="width: 40%;"><span>Item</span></td>
+			                                                    <td class="text-center"><span>Price Before Adjusted</span> <span class="small">(each)</span></td>
+			                                                    <td class="text-center"><span>Price</span> <span class="small">(each)</span></td>
+			                                                    <td class="text-center"><span>Quantity</span></td>
+			                                                    <td class="text-center"><span>Total</span></td>
+			                                                </tr>
+			                                                </thead>
+			                                                <tbody id="quantity-holder">
+				                                                <tr th:each="item: ${cart.cartItems}" th:id="'productRow' + ${item.sku.id}">
+				                                                    <td class="cart-img-holder" style="width: 12%;">
+				                                                        <img width="60" th:src="${item.sku.primaryPhoto}" th:alt="${item.sku.name}" class="img-responsive" style="width: 60px;" />
+				                                                    </td>
+				                                                    <td class="text-left" style="width: 40%;">
+				                                                        <h3><a th:href="@{${site_prefix}+ '/product/detail/' + ${item.sku.id}}" th:text="${item.sku.name}"></a></h3>
+				                                                    </td>
+				                                                    <td class="text-right cart_price">
+				                                                        <div class="price money" th:text="${item.sku.retailPrice}"></div>
+				                                                    </td>
+				                                                    <td class="text-right cart_price">
+				                                                        <div class="price money" th:text="${item.sku.salePrice}"></div>
+				                                                    </td>
+				                                                    <td class="cart_quantity text-center number" th:text="${item.quantity}"></td>
+				                                                    <td class="text-right">
+				                                                        <div class="price price-total money" th:text="${item.totalPrice}"></div>
+				                                                    </td>
+				                                                </tr>
+				
+				                                                <tr>
+				                                                    <td colspan="5" class="text-right"><strong>SubTotal</strong></td>
+				                                                    <td class="text-right">
+				                                                        <div class="price money" id="subTotalId" th:text="${cart.totalPrice}"></div>
+				                                                    </td>
+				                                                </tr>
+				                                                <tr>
+				                                                    <td colspan="5" class="text-right"><strong>Discount Total</strong></td>
+				                                                    <td class="text-right">
+				                                                        <div class="price money" id="discountTotalId" th:text="${checkoutPayment != null ? checkoutPayment.totalDiscount : 0.00}"></div>
+				                                                    </td>
+				
+				                                                </tr>
+				                                                <tr>
+				                                                    <td colspan="5" class="text-right"><strong>Taxes</strong></td>
+				                                                    <td class="text-right">
+				                                                        <div class="price money" id="taxId" th:text="${checkoutPayment != null ? checkoutPayment.totalTax : 0.00}"></div>
+				                                                    </td>
+				                                                </tr>
+				                                                <tr>
+				                                                    <td colspan="5" class="text-right"><strong>Shipping</strong></td>
+				                                                    <td class="text-right">
+				                                                        <div th:class="${shippingCostUnk ? 'price shippingTotal' : 'price money shippingTotal'}" th:text="${shippingCostUnk ? '-' : (defaultSO != null ? defaultSO.price : 0.00)}"></div>
+				                                                    </td>
+				                                                </tr>
+				                                                <tr>
+				                                                    <td colspan="5" class="text-right"><strong>Order Total</strong><!-- <span th:if="${shippingCostUnk}"><br/>(not include shipping cost)</span> --></td>
+				                                                    <td class="text-right">
+				                                                        <div class="price money" id="orderTotalId" th:with="shippingTotal=${defaultSO != null ? defaultSO.price : 0.00}" th:text="${checkoutPayment != null ? checkoutPayment.orderTotal : cart.totalPrice + shippingTotal}"></div>
+				                                                    </td>
+				                                                </tr>
+				                                                <!-- <tr>
+				                                                	<td colspan="6" class="text-right">Get <strong class="number" th:text="${checkoutPayment != null ? checkoutPayment.cartPoint : 0}" id="pointId">xx </strong> Loyalty Points for this order.</td>
+				                                                </tr> -->
+			                                                </tbody>
+			                                            </table>
+			                                        </div>
+			                                    </div>
+			                                </div>
+			                            </div>
+			                        </div>
+			                    </div>
+			
+			                    <div class="clearfix"></div>
+			
+			                    <div class="panel-group" id="accordion">
+			                        <div>
+			                            <div>
+			                                <div id="order-info-section" class="panel panel-default">
+			                                    <div class="panel-heading">
+			                                        <h4 class="panel-title">
+			                                            <a href="#collapse-checkout-option" data-toggle="collapse" data-parent="#accordion" class="accordion-toggle collapsed" aria-expanded="false">
+			                                                Step 1: Checkout Options <i class="fa fa-caret-down"></i>
+			                                            </a>
+			                                        </h4>
+			                                    </div>
+			                                    <div class="panel-collapse collapse" id="collapse-checkout-option" style="height: 0px;"
+			                                         aria-expanded="false">
+			                                        <div class="panel-body">
+			                                            <div class="row">
+			                                                <div class="clearfix col-sm-12">
+			                                                    <div class="form-group">
+			                                                        <h3><span>Email Address</span></h3>
+			                                                        <p th:text="${profile.email}"></p>
+			                                                    </div>
+			                                                </div>
+			                                            </div>
+			                                        </div>
+			                                    </div>
+			                                </div>
+			                            </div>
+			                        </div>
+			                        <div class="clearfix"></div>
+			                    </div>
+								
+								<div class="panel-group" id="accordion">
+			                        <div id="shipping-info-section" class="panel panel-default">
+			                            <div class="panel-heading">
+			                                <h4 class="panel-title">
+			                                    <a id="sec03" href="#collapse-shipping-infomation" data-toggle="collapse" data-parent="#accordion" class="accordion-toggle" aria-expanded="true">
+			                                        Step 2: Shipping Information <i class="fa fa-caret-down"></i>
+			                                    </a>
+			                                </h4>
+			                            </div>
+			                            <div class="panel-collapse collapse" id="collapse-shipping-infomation" aria-expanded="true">
+			                                <div class="panel-body">
+			                                    <div class="row">
+			                                        <div class="panel-body">
+			                                            <div class="col-sm-6 left_content" style="margin-top: 20px;">
+			                                                <h3><span>Shipping Address</span>
+			                                                    <button type="button" class="btn btn-primary" id="editSABtnId" th:if="${defaultSA != null}">Edit</button>
+			                                                </h3>
+			                                                <div class="clearfix" id="shipping_info_summary" th:if="${defaultSA != null}">
+			                                                    <address>
+			                                                            <span th:text="${defaultSA.firstName}" th:remove="tag"></span>&nbsp;<span th:text="${defaultSA.lastName}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultSA.businessName}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultSA.addressLine1}" th:remove="tag"></span>&nbsp;<span th:text="${defaultSA.addressLine2}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultSA.city + ', ' + defaultSA.state + ' ' + defaultSA.zipCode + ', ' + defaultSA.country}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultSA.phone}" th:remove="tag"></span>
+		                                                        </address>
+			                                                </div>
+			                                                <div class="col-sm-12">
+			                                                    <form id="shipping_form" th:class="${defaultSA != null} ? hide">
+			                                                        <div class="form-group" th:if="${defaultSA != null}">
+			                                                            <label for="billingAddressId" class="control-label"> <span>Options</span></label>
+			                                                            <select id="shippingAddressSltId" name="shippingAddressId" class="form-control" style="text-align: center;">
+			                                                                <option value="" style="text-align: center;">Create new address</option>
+			                                                                <option style="text-align: center;" th:each="sa:${checkout.shippingAddresses.addresses}" th:value="${sa.id}" th:selected="${sa.id == defaultSA.id} ? selected" th:text="${sa.firstName + ' ' + sa.lastName}"></option>
+			                                                            </select>
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="firstNameSAIptId" class="control-label"><span>First Name</span> <b style="color: red;">*</b></label>
+			                                                            <input type="text" class="form-control clearable" required="required" id="firstNameSAIptId" name="firstName" value="" />
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="lastNameSAIptId" class="control-label"><span>Last Name</span> <b style="color: red;">*</b></label>
+			                                                            <input type="text" class="form-control clearable" required="required" id="lastNameSAIptId" name="lastName" value=""/>
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="businessNameSAIptId" class="control-label"><span>Business name</span></label>
+			                                                            <input type="text" class="form-control clearable" id="businessNameSAIptId" name="businessName" value=""/>
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="phoneSAIptId" class="control-label"><span>Phone</span> <b style="color: red;">*</b></label>
+			                                                            <input type="tel" id="phoneSAIptId" name="phone" required="required" class="form-control clearable" placeholder="xxx-xxx-xxxx" value=""/>
+			                                                        </div>
+			                                                        <div class="clearfix"></div>
+			                                                        <div class="form-group">
+			                                                            <label for="address1SAIptId" class="control-label"><span>Address 1</span> <b style="color: red;">*</b></label>
+			                                                            <input type="text" class="form-control clearable" required="required" id="address1SAIptId" name="address1" value=""/>
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="address2SAIptId" class="control-label"><span>Address 2</span></label>
+			                                                            <input type="text" class="form-control clearable" id="address2SAIptId" name="address2" value=""/>
+			                                                        </div>
+			                                                        <div class="clearfix"></div>
+			                                                        <div class="form-group">
+							                                            <label for="countrySASltId" class="control-label"><span>Country <b style="color: red;">*</b></span></label>
+							                                            <div>
+							                                                <select id="countrySASltId" class="form-control" style="text-align: center;" name="countryCode" required="required">
+											                                    <option selected="selected" disabled="disabled" value="" style="text-align: center;">Select country</option>
+											                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.isoCode}" th:text="${country.name}" th:selected="${country.isoCode == defaultCountry} ? selected"></option>
+							                                                </select>
+							                                            </div>
+							                                        </div>
+				                                                    <div id="stateGroup" class="form-group">
+							                                            <label for="stateSASltId" class="control-label"><span>State <b style="color: red;">*</b></span></label>
+							                                            <div>
+							                                                <select id="stateSASltId" class="form-control" style="text-align: center;" name="state" required="required">
+							                                                    <option value="">Select state</option>
+							                                                </select>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="citySAIptId" class="control-label"><span>City <b style="color: red;">*</b></span></label>
+						                                               	<input type="text" class="form-control" id="citySAIptId" name="city" value="" required="required"/>
+							                                        </div>
+			                                                        <div class="form-group">
+			                                                            <label for="zipCodeSAIptId" class="control-label"><span>Zip Code</span> <b style="color: red;">*</b></label>
+			                                                            <input type="text" class="form-control clearable" required="required" id="zipCodeSAIptId" name="zipCode" value="" />
+			                                                        </div>
+			                                                        <div class="form-group">
+			                                                        	<input type="checkbox" style="width: 14px; display: inline;" id="defaultSACbxId" name="default" value="true" />
+			                                                            <label for="default" class="control-label" style="display: inline; padding-left: 0px"><span>Make Default</span></label>
+			                                                        </div>
+			                                                        <input type="hidden" id="addressIdSAIptId" th:value = "${defaultSA != null ? defaultSA.id : ''}"/>
+			                                                        <div class="pull-right">
+			                                                            <input id="save_shipping" type="submit" data-loading-text="Processing..." class="btn btn-primary" value="Save Shipping" />
+			                                                        </div>
+			                                                        <div class="clearfix"></div>
+			                                                    </form>
+			                                                </div>
+			                                            </div>
+			
+			                                            <div class="col-sm-6 right_content" style="margin-top: 20px;">
+			                                                <h3><span>Shipping Method</span></h3>
+			                                               <!--  <div class="col-sm-12 group shipping-info-read-only" id="shipping-method-info" th:if="${defaultSO != null}">
+			                                                    <b th:text="${defaultSO.name}"></b><br/><b th:text="${'(' + defaultSO.desc + ')'}"></b>
+			                                                </div> -->
+			                                                <div class="col-sm-12">
+			                                                    <!-- <span>Please Select Shipping Method</span> -->
+			                                                    <form id="shipping-method-form">
+			                                                        <table cellspacing="0" cellpadding="5" id="shippingoptions" class="checkoutTable" style="margin-left: 20px">
+			                                                            <tbody>
+			                                                            <tr th:if="${checkout != null}" th:each="so:${checkout.shippingOptions}">
+			                                                                <td>
+			                                                                    <label class="radio">
+			                                                                        <input type="radio" th:value="${so.id}" th:id="${'shippingOptionId-' + so.id}" name="shippingOptionIptName" required="required" th:checked="${defaultSO != null and so.id == defaultSO.id} ? checked" />
+			                                                                        <span th:text="${so.name}"></span>&nbsp;(<span th:text="${so.desc}"></span>)
+			                                                                        <span class="money shippingTotal" th:text="${so.price}"></span>
+			                                                                    </label>
+			                                                                </td>
+			                                                            </tr>
+			                                                            </tbody>
+			                                                        </table>
+			                                                        <br/>
+			                                                        <div class="clearfix"></div>
+			                                                    </form>
+			                                                </div>
+			                                            </div>
+			                                        </div>
+			                                    </div>
+			                                </div>
+			                            </div>
+			                        </div>
+			                    </div>
+									
+			                    <div class="panel-group" id="accordion">
+			                        <div id="billing-info-section" class="panel panel-default in">
+			                            <div class="panel-heading">
+			                                <h4 class="panel-title">
+			                                    <a id="sec02" href="#collapse-billing-details" data-toggle="collapse"
+			                                       data-parent="#accordion" class="accordion-toggle" aria-expanded="true">
+			                                        Step 3: Billing Information <i class="fa fa-caret-down"></i>
+			                                    </a>
+			                                </h4>
+			                            </div>
+			                            <div class="panel-collapse collapse" id="collapse-billing-details" aria-expanded="true">
+			                                <div class="panel-body">
+			                                    <div class="row">
+			                                        <div class="clearfix"></div>
+			                                        <div class="panel-body">
+			                                            <div class="col-sm-6 left_content" style="margin-top: 20px;">
+			                                                <h3>
+			                                                    <span>Billing Address</span>
+			                                                    <button type="button" class="btn btn-primary" id="editBABtnId" th:if="${defaultBA != null}">Edit</button>
+			                                                </h3>
+			                                                <div class="col-sm-12 clearfix" id="billing_info_summary" th:if="${defaultBA != null}">
+			                                                    <div class="form-group group shipping-info-read-only">
+			                                                        <address>
+			                                                            <span th:text="${defaultBA.firstName}" th:remove="tag"></span>&nbsp;<span th:text="${defaultBA.lastName}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultBA.addressLine1}" th:remove="tag"></span>&nbsp;<span th:text="${defaultBA.addressLine2}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultBA.city + ', ' + defaultBA.state + ' ' + defaultBA.zipCode + ', ' + defaultBA.country}" th:remove="tag"></span><br/>
+			                                                            <span th:text="${defaultBA.phone}" th:remove="tag"></span>
+			                                                        </address>
+			                                                    </div>
+			                                                </div>
+						
+			                                                <div class="col-sm-12">
+				                                                <form id="billing_form" th:class="${defaultBA != null} ? hide">
+				                                                    <div class="form-group" th:if="${defaultBA != null}">
+				                                                        <label for="billingAddressId" class="control-label"> <span>Options</span></label>
+				                                                        <div class="">
+				                                                            <select id="billingAddressSltId" name="billingAddressId" class="form-control" style="text-align: center;">
+				                                                                <option value="" style="text-align: center;">Create new address</option>
+				                                                                <option style="text-align: center;" th:each="ba:${checkoutShipping.billingAddresses.addresses}" th:value="${ba.id}" th:selected="${ba.id == defaultBA.id} ? selected" th:text="${ba.firstName + ' ' + ba.lastName}"></option>
+				                                                            </select>
+				                                                        </div>
+				                                                    </div>
+				
+			                                                   		<div class="form-group">
+							                                            <label for="firstName" class="control-label"><span>First Name <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="firstNameIptId" name="firstName" value="" required="required" />
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="lastName" class="control-label"><span>Last Name<b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="lastNameIptId" name="lastName" value="" required="required"/>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="phone" class="control-label"><span>Phone <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="tel" id="phoneIptId" name="phone" class="form-control" value="" required="required"/>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="address1" class="control-label"><span>Address 1 <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="address1IptId" name="address1" value="" required="required"/>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="address2" class="control-label"><span>Address 2</span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="address2IptId" name="address2" value="" />
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="country" class="control-label"><span>Country <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <select id="countrySltId" class="form-control" style="text-align: center;" name="countryCode" required="required">
+											                                    <option selected="selected" disabled="disabled" value="" style="text-align: center;">Select country</option>
+											                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.isoCode}" th:text="${country.name}" th:selected="${country.isoCode == defaultCountry} ? selected"></option>
+							                                                </select>
+							                                            </div>
+							                                        </div>
+							                                        <div id="stateGroup" class="form-group">
+							                                            <label for="city" class="control-label"><span>State <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <select id="stateSltId" class="form-control" style="text-align: center;" name="state" required="required">
+							                                                    <option selected="selected" disabled="disabled" value="">Select state</option>
+							                                                </select>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="city" class="control-label"><span>City <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="cityIptId" name="city" value="" required="required"/>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                            <label for="zipCode" class="control-label"><span>Zip Code <b style="color: red;">*</b></span></label>
+							                                            <div class="">
+							                                                <input type="text" class="form-control" id="zipCodeIptId" name="zipCode" required="required"/>
+							                                            </div>
+							                                        </div>
+							                                        <div class="form-group">
+							                                        	<input type="checkbox" style="width: 14px; display: inline; margin-top: 11px" id="defaultCbxId" name="default" value="true" />
+							                                            <label for="default" class="control-label" style="display: inline;"><span>Make Default</span></label>
+							                                        </div>
+							                                        <input type="hidden" id="addressIdIptId" th:value = "${defaultBA != null ? defaultBA.id : ''}"/>
+							                                        <div class="clearfix"></div>
+				                                                    <div class="form-group">
+				                                                        <div class="col-sm-12">
+				                                                            <div class="pull-right">
+				                                                                <input type="submit" data-loading-text="Loading..." class="btn btn-primary" value="Save Billing" />
+				                                                            </div>
+				                                                        </div>
+				                                                    </div>
+				                                                </form>
+			                                            	</div>
+			                                            </div>
+			                                        </div>
+			                                    </div>
+			                                </div>
+			                            </div>
+			                        </div>
+			                        <div class="clearfix"></div>
+			                    </div>
+			
+			                    <div class="clearfix"></div>
+			                </div>
+			
+			                <div class="panel-group" id="accordion">
+			                    <div id="payment-info-section" class="panel panel-default">
+			                        <div class="panel-heading">
+			                            <h4 class="panel-title">
+			                                <a id="sec04" href="#collapse-payment-option" data-toggle="collapse" data-parent="#accordion" class="accordion-toggle" aria-expanded="true">
+			                                    Step 4: Payment Options <i class="fa fa-caret-down"></i>
+			                                </a>
+			                            </h4>
+			                        </div>
+			                        <div class="panel-collapse collapse" id="collapse-payment-option" style="height: auto;">
+			                            <div class="panel-body">
+			                                <div class="row">
+			                                    <div class="clearfix"></div>
+			                                    <div id="payment_info_form" class="col-sm-12">
+			                                        <dl id="promoCreditOptions">
+			                                            <dd>
+			                                                <div id="promo-code-form-div" class="col-sm-6">
+			                                                    <h3><span>Promotion Code</span></h3>
+			                                                    <form id="PromoCodeFmId" class="manage-promo">
+			                                                        <div class="form-group">
+			                                                            <input id="promoCodeIptId" class="form-control" type="text" th:value="${checkoutPayment != null ? checkoutPayment.promoCode : ''}" style="text-transform: uppercase;"/>
+			                                                        </div>
+			                                                        <input type="submit" class="btn btn-primary" value="Confirm" />
+			                                                    </form>
+			                                                </div>
+			                                                <!-- <div class="col-sm-6">
+			                                                	<h3><span>Loyalty Point</span></h3>
+			                                                	<div class="col-sm-12">
+					                                        		<label>You have <span class="number" th:text="${profile.point}"></span> point(s).</label>
+					                                        	</div>
+					                                        	<div id="use-point" class="col-sm-12" th:if="${checkoutPayment != null and checkoutPayment.canUsePoint}">
+				                                                    <label class="checkbox-inline"><input type="checkbox" id="usePointCbxId" name="usePointCbxId" value="true" /><span>Use Loyalty Point</span></label>
+				                                                </div>
+			                                                </div> -->
+			                                                <div class="clearfix"></div>
+			                                            </dd>
+			                                        </dl>
+			                                        <div class="payment_info">
+			                                            <h3><span>Payment Method</span></h3>
+			
+			                                            <form role="form" id="checkoutFrmId">
+			                                                <div class="clearfix"></div>
+			                                                <div id="paymentOptions" class="col-sm-6" th:if="${checkoutShipping != null}">
+			                                                	<div>
+			                                                		<div th:each="po:${checkoutShipping.paymentOptions}" th:remove="tag">
+				                                                		<dt th:if="${po.id == paymentBank or po.id == paymentCod}">
+				                                                			<input type="radio" name="paymentMethodIptName" th:value="${po.id}" th:id="${'paymentMethod-' + po.id}" required="required"/>
+				                                                       		<label for="paymentMethod_bt" class="control-label"><span th:text="${po.name}"></span></label>
+				                                                		</dt>
+				                                                		<dt th:if="${po.id == paymentPaypal}">
+				                                                			<input type="radio" name="paymentMethodIptName" th:value="${po.id}" th:id="paymentMethodPaypalId" required="required"/>
+				                                                       		<label for="paymentMethod_bt" class="control-label"><span th:text="${po.name}"></span></label>
+				                                                       		<div id="paypalDivId" style="display: none">
+				                                                       			<div id="paypalBtnId"></div>
+				                                                       		</div>
+				                                                		</dt>
+				                                                	</div>
+				                                                	<div th:each="po:${checkoutShipping.paymentOptions}" th:remove="tag">
+				                                                		<div th:if="${po.id == paymentCredit}">
+				                                                			<dt>
+						                                                        <input type="radio" name="paymentMethodIptName" th:value="${po.id}" id="paymentMethodCreditId" required="required"/>
+						                                                        <label for="paymentMethod_cc" class="control-label"><span th:text="${po.name}"></span></label>
+						                                                    </dt>
+						                                                    <dd style="display: block;">
+						                                                        <div id="creditCardDivId" style="display: none;">
+						                                                            <div class="form-group">
+						                                                                <span>
+						                                                                    <img th:src="${resources_path + '/mitlib/img/payment/american-express-curved-32px.png'}" />
+						                                                                    <img th:src="${resources_path + '/mitlib/img/payment/mastercard-curved-32px.png'}" />
+						                                                                    <img th:src="${resources_path + '/mitlib/img/payment/visa-curved-32px.png'}" />
+						                                                                    <img th:src="${resources_path + '/mitlib/img/payment/discover-curved-32px.png'}" />
+						                                                                </span>
+						                                                            </div>
+						                                                            <div class="form-group">
+						                                                                <label for="cardName" class="control-label prompt"><span>Name on the Card</span> <b style="color: red;">*</b></label>
+						                                                                <div class="form100">
+						                                                                    <input type="text" id="cardNameIptId" class="form-control" name="cardName" />
+						                                                                </div>
+						                                                            </div>
+						                                                            <div class="form-group">
+						                                                                <label for="cardNumber" class="control-label prompt"><span>Card Number</span> <b style="color: red;">*</b></label>
+						                                                                <div class="element form100">
+						                                                                    <input type="number" value="" id="cardNumberIptId" class="form-control" autocomplete="off" name="cardNumber" />
+						                                                                </div>
+						                                                            </div>
+						                                                            <div class="clearfix"></div>
+						                                                            <div class="form-group">
+						                                                                <label for="cardCode" class="control-label prompt"><span>CVV</span> <b style="color: red;">*</b></label>
+						                                                                <div class="element form100">
+						                                                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6" style="padding-left: 0px;">
+						                                                                        <input type="number" id="cardCodeIptId" class="form-control" autocomplete="off" name="cardCode" />
+						                                                                        <span id="securityCodeError" class="error"></span>
+						                                                                    </div>
+						                                                                    <div class="col-lg-6 col-md-6 col-sm-6 col-xs-6">
+						                                                                        <span>
+						                                                                            <img th:src="${resources_path + '/mitlib/img/payment/cvv-hint.png'}" style="width: 60px;" />
+						                                                                        </span>
+						                                                                    </div>
+						                                                                </div>
+						                                                            </div>
+						                                                            <div class="clearfix"></div>
+						                                                            <div class="form-group" style="margin-top: 13px;">
+						                                                                <label for="expirationDate" class="control-label prompt">
+						                                                                    <span>Expiration Date</span> <b style="color: red;">*</b>
+						                                                                </label>
+						                                                                <div class="element form100">
+						                                                                    <select id="cardExpMonthSltId" class="col-sm-3" name="monthcard" style="text-align: center; padding-bottom: 0px;">
+						                                                                        <option value="" disabled="disabled">MM</option>
+						                                                                        <option th:each="i:${#numbers.sequence(1,12)}" th:with="a=${i &lt; 10 ? '0' + i : i}" th:value="${a}" th:text="${a}"></option>
+						                                                                    </select>
+						                                                                    <select id="cardExpYearSltId" class="col-sm-4" name="yearcard" style="text-align: center; padding-bottom: 0px;">
+						                                                                        <option value="" disabled="disabled">YYYY</option>
+						                                                                        <option th:each="i:${#numbers.sequence(#dates.year(#dates.createNow()),2060)}" th:value="${i}" th:text="${i}"></option>
+						                                                                    </select>
+						                                                                </div>
+						                                                            </div>
+						                                                            <div class="clearfix"></div>
+						                                                        </div>
+						                                                        <div class="clearfix" style="margin-bottom: 15px;"></div>
+						                                                    </dd>
+				                                                		</div>
+			                                                		</div>
+			                                                	</div>
+			                                                </div>
+			                                                <div class="clearfix"></div>
+			                                                <div class="col-sm-3">
+			                                                    <input type="submit" class="btn btn-primary" value="SUBMIT" style="display: none"/>
+			                                                </div>
+			                                            </form>
+			                                        </div>
+			                                        <div class="clearfix"></div>
+			                                    </div>
+			                                </div>
+			                            </div>
+			                        </div>
+			                    </div>
+			                    <div class="clearfix"></div>
+			                </div>
+			            </div>
+			        </div>
+			        <input type="hidden" id="state_emptyText_id" value="--- Please Select State ---" />
+			        <script>
+					    var CREATE_PAYMENT_URL  = App.getFullUri(App.uris.checkoutPaypalCreatePayment);
+					    var EXECUTE_PAYMENT_URL = App.getFullUri(App.uris.checkoutPaypalExePayment);
+					
+					    paypal.Button.render({
+					
+					        env: 'production', // Or 'sandbox'
+					
+					        commit: true, // Show a 'Pay Now' button
+					
+					        payment: function() {
+					        	return createPaypalPayment();
+					        },
+					
+					        onAuthorize: function(data) {
+					        	return executePaypalPayment(data);
+					            /* return paypal.request.post(EXECUTE_PAYMENT_URL, {
+					                paymentID: data.paymentID,
+					                payerID:   data.payerID
+					            }).then(function() {
+					
+					                // The payment is complete!
+					                // You can now show a confirmation message to the customer
+					            }); */
+					        }
+					
+					    }, '#paypalBtnId');
+					</script>
+		        </div>
+		
+		        <div class="cart-page-area" style="padding-top: 20px;" id="nocartview" th:if="${cart == null or cart.totalQuantity == 0}">
+		            <div class="container">
+		                <div class="row">
+		                    <!--<div class="col-lg-2 col-md-12 col-sm-12 col-xs-12"></div>-->
+		                    <div class="col-lg-10 col-md-12 col-sm-12 col-xs-12">
+		                        <div class="cart-page-bottom-right" style="text-align: center;">
+		                            <h2>Your cart is empty</h2>
+		                            <div class="proceed-button" style="text-align: center;">
+		                                <a class="btn-apply-coupon disabled" th:href="@{${site_prefix} + '/product'}">Continue Shopping</a>
+		                            </div>
+		                        </div>
+		                    </div>
+		                    <!--<div class="col-lg-2 col-md-12 col-sm-12 col-xs-12"></div>-->
+		                </div>
+		            </div>
+		        </div>
+		        <div class="col-lg-1 col-md-12 col-sm-12 col-xs-12"></div>
+		    </div>
+		</div>
+		</div>
+	</div>
+</body>
+</html>

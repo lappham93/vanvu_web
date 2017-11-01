@@ -1,0 +1,162 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/product.js'"></script>
+</head>
+<body>
+	<div layout:fragment="content">
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>Product Details</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + ''}">Home</a> /</li>
+		                        <li><a th:href="@{${site_prefix} + '/product'}">Product</a> /</li>
+		                        <li>Details</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>  
+		</div> 
+		
+		<div class="product-details2-area" style="padding-bottom: 20px;">
+		    <div class="container" th:if="${sku != null}" th:with="soldOut=${sku.qtyOnHand == 0}">
+		        <div class="row">
+		            <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+		                <div class="inner-product-details-left">
+		                    <div class="tab-content">
+		                        <div class="tab-pane fade active in" th:id="${sku.primaryPhotoId}">
+		                            <a href="#" class="zoom ex1"><img alt="single" th:src="${sku.primaryPhoto}" class="img-responsive" style="max-height:400px"/></a>
+		                        </div>
+		                        <div th:each="otherPhoto,status:${sku.photos}" class="tab-pane fade in" th:id="${'photo-' + status.count}">
+		                            <a href="#" class="zoom ex1"><img alt="single" th:src="${otherPhoto}" class="img-responsive" style="max-height:400px"/></a>
+		                        </div>
+		                    </div>
+		                    <ul>
+		                        <li class="active"><a th:href="${'#' + sku.primaryPhotoId}" data-toggle="tab" aria-expanded="false"><img alt="related1" th:src="${sku.primaryPhoto}" class="img-responsive" style="max-height:65px" /></a></li>
+		                        <li th:each="otherPhoto,status:${sku.photos}"><a th:href="${'#photo-' + status.count}" data-toggle="tab" aria-expanded="false"><img alt="related1" th:src="${otherPhoto}" class="img-responsive" style="max-height:65px" /></a></li>
+		                    </ul>
+		                </div>
+		            </div>
+		            <div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">
+		                <div class="inner-product-details-right">
+		                    <h3 th:text="${sku.name}"></h3>
+		                    <div class="product-details-content" style="margin-top: 15px; margin-bottom: 0px;">
+		                        <p><span>Availability:</span> <span th:text="${soldOut ? 'Sold out' : 'In stock'}" th:remove="tag"></span></p>
+		                        <p><span>Model:</span> <span th:text="${sku.model}" th:remove="tag"></span> </p>
+		                        <div th:if="${sku.type == comboSkuType}" th:remove="tag">
+		                        	<p> <span>Item(s):</span>
+		                        		<span th:each="skuId: ${sku.skuIds}" th:remove="tag">
+		                        			<br/><span>- </span><a th:href="@{${site_prefix}+ '/product/detail/' + ${skuId}}"><span th:text="${sku.skus.get(skuId).name}" th:remove="tag"></span></a><span style="text-transform: none; font-weight: normal;" th:text="${' x ' + sku.quantities.get(skuId)}"></span>
+		                        		</span>
+		                        	</p>
+		                        </div>
+		                    </div>
+		                    <p th:text="${sku.desc}"></p>
+		                    <p class="price">
+		                    	<span style="color: #727272; text-decoration: line-through;" th:if="${sku.retailPrice > sku.salePrice}" class="money" th:text="${sku.retailPrice}"></span> <span class="money" th:text="${sku.salePrice}"></span></p>
+		                    
+		                    <div th:if="${color != null and #lists.size(color) > 0}" th:remove="tag">
+			                    <p style="margin-bottom: 5px; color: #212121; font-weight: 600;">Choose color:</p>
+			                    <div id="product" class="col-lg-12 col-md-12 col-sm-12 col-xs-12" style="text-align: left;">
+			                        <ul class="reset skus swatches">
+			                            <li th:each="skuOv: ${color}" th:with="selected=${skuOv.sku.id == sku.id}" th:class="${selected ? 'selected' : ''}"><a th:href="@{${site_prefix}+ '/product/detail/' + ${skuOv.sku.id}}"><span class="swatch" th:style="${'background-color:' + skuOv.pov.value}" data-toggle="tooltip" data-placement="top" th:title="${skuOv.pov.name}"></span></a></li>
+			                        </ul>
+			                    </div>
+		                    </div>
+		                    
+		                    <div th:if="${size != null and #lists.size(size) > 0}" th:remove="tag">
+			                    <p style="margin-bottom: 5px; color: #212121; font-weight: 600;">Choose size:</p>
+			                    <div id="product" class="col-lg-12 col-md-12 col-sm-12 col-xs-12" style="text-align: left;">
+			                        <ul class="reset skus swatches">
+			                            <li th:each="skuOv: ${size}" th:class="${skuOv.sku.id == sku.id ? 'selected' : ''}"><a th:href="@{${site_prefix}+ '/product/detail/' + ${skuOv.sku.id}}"><img class="swatch" th:src="${skuOv.pov.photo}" data-toggle="tooltip" data-placement="top" th:title="${skuOv.pov.name}"/></a></li>
+			                        </ul>
+			                    </div>
+		                   	</div>
+		                   			                    
+		                    <ul class="inner-product-details-cart">
+		                        <li th:if="${soldOut == false}"><a title="Add to cart" th:onclick="'addToCartNoQuantity(' + ${sku.id} + ',\'' + ${sku.name} + '\')'">Add To Cart</a></li>
+		                        <li>
+		                            <div class="input-group quantity-holder" id="quantity-holder">
+		                                <input th:id="${'quantity-' + sku.id}" type="text" name='quantity' class="form-control quantity-input" value="1" placeholder="1" onchange="changeQtt(this); return false;" />
+		                                <div class="input-group-btn-vertical">
+		                                    <button class="btn btn-default quantity-plus" type="button"><i class="fa fa-plus" aria-hidden="true"></i></button>
+		                                    <button class="btn btn-default quantity-minus" type="button"><i class="fa fa-minus" aria-hidden="true"></i></button>
+		                                </div>
+		                            </div>
+		                        </li>
+		                        <li><a th:onclick="'addToWishlist(' + ${sku.id} + ',\'' + ${sku.name} + '\')'"><i aria-hidden="true" class="fa fa-heart-o"></i></a></li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		        <div class="product-details-tab-area">
+		            <div class="row">
+		                <div class="col-lg-12 col-md-12 col-sm-12">
+		                    <ul>
+		                        <li class="active"><a href="#description" data-toggle="tab" aria-expanded="false">Description</a></li>
+		                        <li><a href="#benefits" data-toggle="tab" aria-expanded="false">Benefits</a></li>
+		                        <li><a href="#ingredients" data-toggle="tab" aria-expanded="false">Ingredients</a></li>
+		                    </ul>
+		                </div>
+		                <div class="col-lg-12 col-md-12 col-sm-12">
+		                    <div class="tab-content">
+		                        <div class="tab-pane fade active in" id="description">
+		                            <p th:text="${sku.desc}"></p>
+		                        </div>
+		                        <div class="tab-pane fade" id="benefits">
+		                            <p th:text="${sku.benefit}"></p>
+		                        </div>
+		                        <div class="tab-pane fade" id="ingredients">							
+		                            <p th:text="${sku.ingredient}"></p>
+		                        </div>
+		                    </div>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		    <div class="cart-page-area" style="padding-top: 20px;" th:if="${sku == null}">
+		        <div class="container">
+		            <div class="row">
+		                <!--<div class="col-lg-2 col-md-12 col-sm-12 col-xs-12"></div>-->
+		                <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                    <div class="cart-page-bottom-right" style="text-align: center;">
+		                        <h2>Product is not found.</h2>
+		                        <div class="proceed-button" style="text-align: center;">
+		                            <a class="btn-apply-coupon disabled" th:href="@{${site_prefix} + '/product'}">Continue Shopping</a>
+		                        </div>
+		                    </div>
+		                </div>
+		                <!--<div class="col-lg-2 col-md-12 col-sm-12 col-xs-12"></div>-->
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		
+		<div class="product-area" style="padding-top: 20px; padding-bottom: 20px;" th:if="${similars != null and #lists.size(similars) > 0}">
+		    <div class="container" id="home-isotope">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="section-title">
+		                    <span class="title-bar-left"></span>
+		                    <h2>Similar Products</h2>
+		                    <span class="title-bar-right"></span>
+		                </div>
+		            </div>
+		        </div>
+		        <div class="row featuredContainer">
+		            <div class="col-lg-3 col-md-3 col-sm-4 col-xs-6" th:each="sku: ${similars}">
+		                <div th:replace="fragments :: product-item"></div>
+		            </div>
+		            <div class="row col-lg-12 col-md-12 col-sm-12 col-xs-12 visible-xs-block"></div>
+		            <div class="row col-lg-12 col-md-12 col-sm-12 col-xs-12"></div>
+		        </div>
+		    </div>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,84 @@
+site.title=VietNails
+site.description=Viet Nails!
+site.prefix=/site/vn
+site.resources=/static
+site.resources.path=${site.prefix}${site.resources}
+site.paging.pageSize=10
+
+# HTTP encoding (HttpEncodingProperties)
+spring.http.encoding.charset=UTF-8
+spring.http.encoding.enabled=true
+spring.http.encoding.force=true
+spring.thymeleaf.cache=false
+spring.http.multipart.max-file-size=10MB
+
+server.jetty.uri-encoding = UTF-8
+server.port=10303
+#server.ssl.key-store=classpath:keystore.jks
+#server.ssl.key-store-password=secret
+#server.ssl.key-password=another-secret
+server.session.persistent=true
+
+google.map.api.key=AIzaSyBeMV9bSPJqVxJ7iOgavveX7dPTC5_svKI
+
+google.clientIds=786445467643-7n1os5gu8bihmtpuu33fo74an9v493qs.apps.googleusercontent.com
+
+facebook.graph.url=https://graph.facebook.com/v2.10/
+facebook.appId=463768957341306
+facebook.appSecret=fce373c91c109b229df2363228bea81d
+facebook.accessToken=${facebook.appId}|${facebook.appSecret}
+
+accountkit.api.version=v1.1
+accountkit.graph.url=https://graph.accountkit.com/v1.1/
+accountkit.appSecret=1fe0225cd0610688a2d86649454e468c
+accountkit.accessToken=AA|${facebook.appId}|${accountkit.appSecret}
+
+spring.data.mongodb.host=45.55.39.77
+spring.data.mongodb.port=38901
+spring.data.mongodb.database=vietnail
+spring.data.mongodb.authentication-database=admin
+spring.data.mongodb.username=vietnailUser
+spring.data.mongodb.password=v13tNa1l$123
+
+spring.redis.host=115.79.45.86
+spring.redis.port=6379
+
+firebase.secret=e55c41cfb6ea23ae5792d96d61299a0c
+firebase.serverKey=
+firebase.client.key=AAAAGjD3Irg:APA91bFXziLIOidWEPlambrIfnnrEgFub2veZV9f7CS61CZI3xtxv7_XWdGwvWduCM6se0vzaojbyHdiTKDnHkL55sN4cfqBWDIO_DM7LIP5Z61YlMmPhHPDZwONXMRT4Dnk0AInY2uE
+firebase.provider.key=AAAAGjD3Irg:APA91bFXziLIOidWEPlambrIfnnrEgFub2veZV9f7CS61CZI3xtxv7_XWdGwvWduCM6se0vzaojbyHdiTKDnHkL55sN4cfqBWDIO_DM7LIP5Z61YlMmPhHPDZwONXMRT4Dnk0AInY2uE
+
+
+system.test.signature=c9343693c9676bd1b347e0f6b61f19e8
+
+system.domain=http://115.79.45.86
+system.domain-file=http://115.79.45.86
+system.domain-admin=http://115.79.45.86
+#system.domain-api-socket=ws://45.77.34.142:20002
+#system.domain-upload-socket=ws://45.77.34.142:20005
+system.api-prefix=/vn
+system.domain-upload=http://115.79.45.86/vn/upload
+
+#photo client
+vn_productphoto.thriftclient.host = 115.79.45.86
+vn_productphoto.thriftclient.port = 15841
+vn_productphoto.thriftclient.timeout = 30000
+
+vn_bannerphoto.thriftclient.host = 115.79.45.86
+vn_bannerphoto.thriftclient.port = 15842
+vn_bannerphoto.thriftclient.timeout = 30000
+
+vn_userphoto.thriftclient.host = 115.79.45.86
+vn_userphoto.thriftclient.port = 15843
+vn_userphoto.thriftclient.timeout = 30000
+
+rabbitmq.host = 115.79.45.86
+rabbitmq.port = 5672
+rabbitmq.stompport = 61613
+rabbitmq.user = vietnail
+rabbitmq.password = v13tn61l
+rabbitmq.vh = /
+
+# elastic
+spring.data.elasticsearch.cluster-nodes = 115.79.45.86:9300
+spring.data.elasticsearch.cluster-name = dev

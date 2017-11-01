@@ -1,0 +1,35 @@
+$(function() {
+});
+
+function addToWishlist(skuId, skuName) {
+	var data = {'objectRef': {'id': skuId}};
+	var url = App.getFullUri(App.uris.wishlistItem);
+	App.ajaxRequest('POST', url, data, function(resp) {
+		if (resp.code >= 0) {
+			updateWishlistQuantityToUI(resp.data);
+		}
+		var errors = [];
+		var msgError = "Can not add \"" + skuName + "\" at this time.";
+		App.callbackAjaxRequest(resp, errors, "", "You have added \"" + skuName + "\" to your wishlist.", msgError);
+	});
+}
+
+function addToCartFromWL(skuId, skuName) {
+	addToCartNoQuantity(skuId, skuName);
+}
+
+function deleteWishListItem(skuId, skuName) {
+	var url = App.getFullUri(App.uris.wishlistItem) + "/" + skuId;
+	App.ajaxRequest('DELETE', url, "", function(resp) {
+		var errors = [];
+		var msgError = "Can not remove \"" + skuName + "\" at this time.";
+		App.callbackAjaxRequest(resp, errors, App.uris.wishlist, "You have removed \"" + skuName + "\" from your wishlist.", msgError);
+	});
+}
+
+function updateWishlistQuantityToUI(quantity) {
+	$('.wishlist-count').each(function(key, value) {
+		$(value).text(quantity);
+	});
+	App.formatNumber();
+}

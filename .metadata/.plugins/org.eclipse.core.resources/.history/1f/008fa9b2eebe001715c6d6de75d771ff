@@ -1,0 +1,157 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/register.js'"></script>
+</head>
+<body>
+	<div layout:fragment="content">
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>Register</h2>
+		                    <ul>
+		                        <li><a href="/">Home</a> /</li>
+		                        <li>Register</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		
+		<div class="login-registration-page-area" style="padding-top: 30px;">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12"></div>
+		            <div class="col-lg-6 col-md-6 col-sm-6 col-xs-12">
+		                <div class="login-registration-field">
+		                    <h2>Fill Info</h2>
+		                    <p>Lets fill your information</p>
+		                    
+		                    <div id="reg_alert_success" class="alert alert-success" style="display: none;"></div>
+		                    <div id="reg_alert_err" class="alert alert-danger" style="display: none;"></div>
+		                    
+		                    <form id="registrationFrmId" class="form-horizontal">
+		                        <div class="form-group">
+		                            <label for="email">
+		                                <span>Email <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input  type="email" class="form-control" required="required" id="emailIptId" name="email" th:value="${loginToken != null ? loginToken.socialProfile.email : ''}" />
+		                            </div>
+		                        </div>
+		                        <div class="form-group">
+		                            <label for="firstName">
+		                                <span>First Name <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input  type="text" class="form-control" id="firstNameIptId" name="firstName" required="required" th:value="${loginToken != null ? loginToken.socialProfile.firstName : ''}"/>
+		                            </div>
+		                        </div>
+		                        <div class="form-group">
+		                            <label for="lastName">
+		                                <span>Last Name <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input  type="text" class="form-control" id="lastNameIptId" name="lastName"  required="required" th:value="${loginToken != null ? loginToken.socialProfile.lastName : ''}"/>
+		                            </div>
+		                        </div>
+		
+		                        <div class="form-group">
+		                            <label for="phone">
+		                                <span>Phone <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-4">
+		                            	<select  id="phoneCodeSltId" size="1" class="form-control" style="text-align: center; height: 40px;" name="phoneCode">
+		                                    <option disabled="disabled" value="" style="text-align: center;">- Please Select Phone Code -</option>
+		                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.phoneCode}" th:text="${country.phoneCode}" th:selected="${loginToken != null and country.isoCode == loginToken.socialProfile.countryCode} ? selected"></option>
+		                                </select>
+		                            </div>
+		                            <div class="col-sm-8">
+		                                <input id="phoneIptId" name="phone" type="tel" class="form-control" placeholder="xxx-xxx-xxx" required="required" />
+		                            </div>
+		                        </div>
+		
+		                        <div class="form-group">
+		                            <label for="country">
+		                                <span>Country <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <select  id="countrySltId" size="1" class="form-control" style="text-align: center; height: 40px;" name="countryCode" required="required">
+		                                    <option selected="selected" disabled="disabled" value="" style="text-align: center;">Select country</option>
+		                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.isoCode}" th:text="${country.name}" th:selected="${country.isoCode == defaultCountry} ? selected"></option>
+		                                </select>
+		                            </div>
+		                        </div>
+		
+		                        <div class="form-group">
+		                            <label for="password">
+		                                <span>Password <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input id="passwordIptId" name="password" type="password" class="form-control" placeholder="At least 6 characters" required="required" onchange="checkLengthPassword();" />
+		                                <span class="error" id="error_length" style="color: red; display: none">Password is at least 6 characters</span>
+		                            </div>
+		                        </div>
+		                        <div class="form-group">
+		                            <label for="passwordConfirm">
+		                                <span>Confirm Password <b class="required required-symbol" style="color: red;">*</b></span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input id="passwordConfirmIptId" name="passwordConfirm" type="password" class="form-control" required="required" onkeyup="checkPasswordMatch();" />
+		                                <span class="error" id="error_match" style="color: red; display: none">Password confirm is not match!</span>
+		                            </div>
+		                        </div>
+		
+		                        <!-- <div class="form-group" style="display: none;">
+		                            <label for="discountCode">
+		                                <span>Discount-Code (Optional)</span>
+		                            </label>
+		                            <div class="col-sm-12">
+		                                <input  type="text" class="form-control" placeholder="Valid discount-code from your sale representative only" id="discountCode" name="discountCode" value="{{DISCOUNT_CODE}}" />
+		                            </div>
+		                        </div> -->
+		
+		                        <div class="buttons clearfix">
+		                            <div class="pull-left">
+		                                <input  class="btn-send-message disabled" type="submit" value="Register" style="padding: 0 10px;" id="submitBtnId"/>
+		                            </div>
+		                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12 visible-xs-block">
+		                           		<span class="" style="margin-left: -15px;"><a th:href="@{${site_prefix} + '/login'}">Login</a></span>
+		                                <!-- <a class="account" style="margin-left: -15px;" href="/tk/login">
+		                                    <span>Login</span>
+		                                </a>
+		                                <br/>
+		                                <a class="account" style="margin-left: -15px;" href="/tk/forgotpassword">
+		                                    <span>Forgotten Password</span>
+		                                </a> -->
+		                            </div>
+		                            <div style="margin-top:5px">
+		                            	<span class="hidden-xs" style="margin-left: 60px;"><a th:href="@{${site_prefix} + '/login'}">Login</a></span>
+		                            </div>
+		                            <!-- <a class="account hidden-xs" style="margin-left: 120px; margin-right: 5px;" href="/tk/login">
+		                                <span>Login</span>
+		                            </a>
+		                            <a class="account hidden-xs" style="margin-left: 5px;" href="/tk/forgotpassword">
+		                                <span>Forgotten Password</span>
+		                            </a> -->
+		                        </div>
+		                        <div class="form-group" style="margin-top:10px">
+		                            <label>
+		                                <span style="margin-left: 15px;"><a onclick="loginACInit()">Facebook Account Kit Sign-In</a></span>
+		                            </label>
+		                        </div>
+		                    </form>
+		                </div>
+		            </div>
+		            <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12"></div>
+		        </div>
+		    </div>
+		</div>
+
+	</div>
+</body>
+</html>

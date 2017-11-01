@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout">
+<head>
+</head>
+<body>
+	<div th:fragment="product-item">
+		<div class="product-box1" th:with="soldOut=${sku.qtyOnHand == 0}">
+            <ul class="product-social">
+                <li th:if="${soldOut == false}"><a th:onclick="'addToCart(' + ${sku.id}+ ',' + '1' + ',\'' + ${sku.name} + '\')'"><i class="fa fa-shopping-cart" aria-hidden="true"></i></a></li>
+                <li><a th:onclick="'addToWishlist(' + ${sku.id} + ',\'' + ${sku.name} + '\')'"><i class="fa fa-heart-o" aria-hidden="true"></i></a></li>
+                <li><a th:onclick="'showProductModal(' + ${sku.id} + ')'"><i class="fa fa-eye" aria-hidden="true"></i></a></li>
+            </ul>
+            <div class="product-img-holder hidden-xs" style="height: 263px;">
+                <div class="hot-sale" th:if="${sku.retailPrice > sku.salePrice}">
+                    <span th:text="${'-' + sku.savingPercent + '%'}"></span>
+                </div>
+                <div class="new" th:if="${sku.new}">
+                    <span>New</span>
+                </div>
+                <div class="sold-out" th:if="${soldOut}">
+                    <span>Sold out</span>
+                </div>
+                <a th:href="@{${site_prefix}+ '/product/detail/' + ${sku.id}}"><img th:src="${sku.primaryPhoto}" th:alt="${sku.name}" style="max-height: 263px;" /></a>
+            </div>
+            <div class="product-img-holder visible-xs-block" style="">
+                <div class="hot-sale" th:if="${sku.retailPrice > sku.salePrice}">
+                    <span th:text="${'-' + sku.savingPercent + '%'}"></span>
+                </div>
+                <div class="new" th:if="${sku.new}">
+                    <span>New</span>
+                </div>
+                <div class="sold-out" th:if="${soldOut}">
+                    <span>Sold out</span>
+                </div>
+                <a th:href="@{${site_prefix}+ '/product/detail/' + ${sku.id}}"><img th:src="${sku.primaryPhoto}" th:alt="${sku.name}" style="max-height: 263px;" /></a>
+            </div>
+            <div class="product-content-holder">
+                <h3><a th:href="@{${site_prefix}+ '/product/detail/' + ${sku.id}}" th:text="${sku.name}"></a></h3>
+                <span><span th:if="${sku.retailPrice > sku.salePrice}" class="money" th:text="${sku.retailPrice}"></span></span><span class="money" th:text="${sku.salePrice}"></span>
+            </div>
+        </div>
+	</div>
+	
+	<div th:fragment="profile_navigation">
+		<div class="col-lg-3 col-md-3 col-sm-12 col-xs-12 col-md-pull-9">
+            <div class="sidebar hidden-before-tab">
+                <div class="best-products sidebar-section-margin" id="account">
+                    <h2 class="title-sidebar">Account</h2>
+                    <div class="media">
+                        <div class="media-body">
+                            <h3 class="media-heading"><a th:href="@{${site_prefix} + '/profile'}" th:class="${active == 'profile'} ? 'active'">My Account</a></h3>
+                            <h3 th:if="${profile.profileType == emailLogin}" class="media-heading"><a th:href="@{${site_prefix} + '/profile/password'}" th:class="${active == 'password'} ? 'active'">Change Password</a></h3>
+                            <h3 class="media-heading"><a th:href="@{${site_prefix} + '/address/billingAddress'}" th:class="${active == 'billingAddress'} ? 'active'">Billing Address</a></h3>
+                            <h3 class="media-heading"><a th:href="@{${site_prefix} + '/address/shippingAddress'}" th:class="${active == 'shippingAddress'} ? 'active'">Shipping Address</a></h3>
+                            <h3 class="media-heading"><a th:href="@{${site_prefix} + '/wishlist'}" th:class="${active == 'wishlist'} ? 'active'">Wish List</a></h3>
+                            <h3 class="media-heading"><a th:href="@{${site_prefix} + '/order'}" th:class="${active == 'order'} ? 'active'">Order History</a></h3>
+                            <!-- <h3 class="media-heading"><a th:href="@{${site_prefix} + '/static/policy'}" th:style="${active == 'policy'} ? 'color: #673ab7;'">Customer Refund Policy</a></h3> -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+	
+	<div th:fragment="delivery">
+		<div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+            <div class="advantage-area-box">
+                <div class="media">
+                    <a class="pull-left" th:href="@{${deliveryPolicy}}">
+                        <i class="flaticon-truck"></i>
+                    </a>
+                    <div class="media-body">
+                        <h3>QUICK TURNAROUND</h3>
+                        <p>On All Orders</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+	
+	<div th:fragment="contactus">
+		<div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+             <div class="advantage-area-box">
+                 <div class="media">
+                     <a class="pull-left" th:href="@{${site_prefix} + '/contactus'}">
+                         <i class="flaticon-headphones"></i>
+                     </a>
+                     <div class="media-body">
+                         <h3>24/7 SERVICE</h3>
+                         <p>Get Help When You Need</p>
+                     </div>
+                 </div>
+             </div>
+         </div>
+	</div>
+	
+	<div th:fragment="refund">
+		<div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+            <div class="advantage-area-box">
+                <div class="media">
+                    <a class="pull-left" th:href="@{${refundPolicy}}">
+                        <i class="flaticon-reload"></i>
+                    </a>
+                    <div class="media-body">
+                        <h3>100% MONEY BACK</h3>
+                        <p>Within 30 Day Guarantee</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+	
+	<!-- <div th:fragment="shipping">
+		<div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
+           <div class="advantage-area-box">
+               <div class="media">
+                   <a class="pull-left" href="#">
+                       <i class="flaticon-truck"></i>
+                   </a>
+                   <div class="media-body">
+                       <h3>FREE SHIPPING</h3>
+                       <p>On All Orders</p>
+                   </div>
+               </div>
+           </div>
+       </div>
+	</div> -->
+</body>
+</html>

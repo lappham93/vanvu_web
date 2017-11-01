@@ -1,0 +1,97 @@
+
+$(function() {
+    $('#miniCartId').unbind().click(function (e) {
+    	if (App.logged) {
+	        var $this = $(this), count = Number($this.find('.cartItemCount').text().replace(/[$,]+/g,""));
+	        var $sub_cart = $('#miniCartDivId');
+	        if ($sub_cart.css('display') == 'none') {
+	            if(count > 0) {
+	                $sub_cart.html('<div style="text-align: center;"><img src="' + $(this).data('loading-url') + '"/>');
+	                $sub_cart.load(App.getFullUri(App.uris.cartMini));
+	            } else {
+	                $sub_cart.html('<div class="cart-page-bottom-right" style="text-align: center;"><h3>Your cart is empty!</h2></div>');
+	            }
+	            $sub_cart.show();
+	        } else {
+	            $sub_cart.hide();
+	        }
+    	} else {
+    		App.redirect(App.uris.login);
+    	}
+        return false;
+    });
+    
+    $(document).click(function(){
+        if($('#miniCartDivId').css('display') != 'none') {
+            $("#miniCartDivId").hide();
+        }
+    });
+});
+
+function addToCartNoQuantity(skuId, skuName) {
+	if ($('#quantity-' + skuId).length > 0) {
+		var quantity = $('#quantity-' + skuId).val();
+		addToCart(skuId, quantity, skuName);
+	}
+}
+
+function addToCart(skuId, quantity, skuName) {
+	var data = {'skuId': skuId, 'quantity': quantity};
+	var url = App.getFullUri(App.uris.cartItem);
+	App.ajaxRequest('POST', url, data, function(resp) {
+		var errors = [App.errors.PARAMS_INVALID, App.errors.ITEM_NOT_FOUND, App.errors.LIMIT_SKU, App.errors.LIMIT_QUANTITY, App.errors.SOLD_OUT];
+		var msgError = "Can not add \"" + skuName + "\" to shopping cart at this time.";
+		if (resp.code >= 0) {
+			updateCartQuantityToUI(resp.data.totalQuantity);
+		} else if (resp.code == App.errors.SOLD_OUT.value) {
+			var qtyOnHand = resp.data.qtyOnHand;
+			if (qtyOnHand > 0) {
+				msgError = "Only " + qtyOnHand + " left!";
+			}
+		}
+		App.callbackAjaxRequest(resp, errors, "", "You have added \"" + skuName + "\" to your shopping cart.", msgError);
+	});
+}
+
+function updateCartItem(skuId, skuName) {
+	var quantity = $('#quantity-' + skuId).val();
+	var data = {'skuId': skuId, 'quantity': quantity};
+	var url = App.getFullUri(App.uris.cartItem);
+	App.ajaxRequest('PUT', url, data, function(resp) {
+		var errors = [App.errors.PARAMS_INVALID, App.errors.ITEM_NOT_FOUND, App.errors.LIMIT_SKU, App.errors.LIMIT_QUANTITY, App.errors.SOLD_OUT];
+		var msgError = "Can not update \"" + skuName + "\" at this time.";
+		if (resp.code == App.errors.SOLD_OUT.value) {
+			var qtyOnHand = resp.data.qtyOnHand;
+			if (qtyOnHand > 0) {
+				msgError = "Only " + qtyOnHand + " left!";
+			}
+		}
+		App.callbackAjaxRequest(resp, errors, App.uris.cart, "You have updated \"" + skuName + "\" in your shopping cart.", msgError);
+	});
+}
+
+function deleteCartItem(skuId, skuName) {
+	var url = App.getFullUri(App.uris.cartItem) + "/" + skuId;
+	App.ajaxRequest('DELETE', url, "", function(resp) {
+		var errors = [];
+		var msgError = "Can not remove \"" + skuName + "\" at this time.";
+		App.callbackAjaxRequest(resp, errors, App.uris.cart, "You have removed \"" + skuName + "\" from your shopping cart.", msgError);
+	});
+}
+
+function updateCartQuantityToUI(quantity) {
+	$('.cartItemCount').each(function(key, value) {
+		$(value).text(quantity);
+	});
+	App.formatNumber();
+}
+
+function changeQtt(self){
+    var qtt = self.value;
+    //console.log("qtt: " + qtt);
+    if(!$.isNumeric(qtt)){
+        self.value = '1';
+    } else{
+    	self.value = Math.min(Math.max(qtt, 1), 100000);
+    }
+};

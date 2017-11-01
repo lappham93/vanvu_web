@@ -1,0 +1,49 @@
+var loginToken = null;
+$(function(){
+	$('#registrationFrmId').submit(function(e){
+		var email = $('#emailIptId').val();
+		if (!App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+		var firstName = $('#firstNameIptId').val();
+		var lastName = $('#lastNameIptId').val();
+//		var phoneCode = $('#phoneCodeSltId').val();
+//		var phone = $('#phoneIptId').val();
+//		phone = phone.replace('-', '');
+		var countryCode = $('#countrySltId').val();
+    	var country = $('#countrySltId option[value="' + countryCode + '"]').text();
+		var token = "", phoneCode = "", phone = "";
+		if (loginToken) {
+			token = loginToken.token;
+			phoneCode = loginToken.socialProfile.countryCode;
+			phone = loginToken.socialProfile.phone;
+		}
+		var data = {'token': token, 'type': App.loginType.ACCOUNT_KIT, 'email': email, 'firstName': firstName, 'lastName': lastName, 'phone': phone, 'countryCode': phoneCode, "address": {
+		    "country": country,
+		    "countryCode": countryCode,
+		  }};
+		var url = App.getFullUri(App.uris.registerSocial);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.INVALID_TOKEN];
+			App.callbackAjaxRequest(resp, errors, App.uris.home);
+		});
+		
+		return false;
+	});
+});
+
+function registrationCallback(resp) {
+	if (resp.code >= 0) {
+		App.redirect(App.uris.home);
+	} else {
+		var msg = "";
+		if (resp.code == App.errors.INVALID_TOKEN.value) {
+			msg = "Invalid token";
+		} else {
+			msg = "Server error";
+		}
+		$.notify('danger', msg);
+		console.log('code = ' + resp.code);
+	}
+}

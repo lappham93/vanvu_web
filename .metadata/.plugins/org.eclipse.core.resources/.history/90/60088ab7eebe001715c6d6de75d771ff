@@ -1,0 +1,53 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+>
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/common.js'"></script>
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+			App.sitePrefix = [[${site_prefix}]];
+			App.resourcePath = [[${resources_path}]];
+			App.paging = [[${paging}]];
+			App.params = [[${params}]];
+			App.logged = [[${profile.logged}]];
+		/*]]>*/
+	</script>
+</head>
+<body>
+		<ul th:if="${cart != null and cart.totalQuantity > 0}" th:remove="tag">
+			<li th:each="item: ${cart.cartItems}">
+			    <div class="cart-single-product">
+			        <div class="media">
+			            <div class="pull-left cart-product-img">
+			                <a th:href="@{${site_prefix}+ '/product/detail/' + ${item.sku.id}}">
+			                    <img class="img-responsive" width="60" th:src="@{${item.sku.primaryPhoto}}" th:alt="${item.sku.name}" />
+			                </a>
+			            </div>
+			            <div class="media-body cart-content">
+			                <ul>
+			                    <li>
+			                        <h1><a th:href="@{${site_prefix}+ '/product/detail/' + ${item.sku.id}}" th:text="${item.sku.name}"></a></h1>
+			                    </li>
+			                    <li>
+			                        <p><span class="number" th:text="${item.quantity}"></span><span th:text="${' x '}" th:remove="tag"></span><span class="money" th:text="${item.sku.salePrice}"></span></p>
+			                    </li>
+			                    <li>
+			                        <a class="trash" title="Remove" th:onclick="'deleteCartItem(' + ${item.sku.id} + ',\'' + ${item.sku.name} + '\')'"><i class="fa fa-trash-o"></i></a>
+			                    </li>
+			                </ul>
+			            </div>
+			        </div>
+			    </div>
+			</li>
+			<li>
+			    <span><span>Sub Total</span></span><span class="money" th:text="${cart.totalPrice}"></span>
+			</li>
+			<li>
+			    <ul class="checkout">
+			        <li><a th:href="@{${site_prefix} + '/cart'}" class="btn-checkout"><i class="fa fa-shopping-cart" aria-hidden="true"></i>View Cart</a></li>
+			        <li><a th:href="@{${site_prefix} + '/checkout'}" class="btn-checkout"><i class="fa fa-share" aria-hidden="true"></i>Checkout</a></li>
+			    </ul>
+			</li>
+		</ul>				
+</body>
+</html>

@@ -1,0 +1,36 @@
+package com.mit.controllers;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.sessions.SiteSession;
+import com.mit.user.bodies.LogoutBody;
+import com.mit.user.services.LoginService;
+
+@Controller
+@RequestMapping(value = "logout")
+public class LogoutController {
+	@Value("${site.prefix}")
+	private String sitePrefix;
+	@Autowired
+	private LoginService loginService;
+
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView logout(HttpServletRequest request) {
+		ModelAndView rs = new ModelAndView();
+		String sessionKey = SiteSession.getSessionKey(request);
+		String refreshToken = SiteSession.getRefreshToken(request);
+		LogoutBody body = new LogoutBody();
+		body.setRefreshToken(refreshToken);
+		loginService.logout(sessionKey, body);
+		rs.setViewName("redirect:" + sitePrefix + "/login");
+		return rs;
+	}
+
+}

@@ -1,0 +1,150 @@
+package com.mit.controllers;
+
+import java.util.Calendar;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ui.Model;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ModelAttribute;
+
+import com.mit.cart.repositories.CartRepo;
+import com.mit.product.responses.CategoryResponse;
+import com.mit.product.services.ProductService;
+import com.mit.react.entities.UserStat;
+import com.mit.react.repositories.UserStatRepo;
+import com.mit.responses.ProfileResponse;
+import com.mit.session.entities.UserSession;
+import com.mit.user.entities.Profile;
+import com.mit.user.entities.SocialProfile;
+import com.mit.user.entities.UserSocial;
+import com.mit.user.enums.SocialType;
+import com.mit.user.repositories.ProfileRepo;
+import com.mit.user.repositories.SocialProfileRepo;
+import com.mit.user.repositories.UserSocialRepo;
+
+@ControllerAdvice
+public final class GlobalController {
+	@Value("${site.prefix}")
+	private String sitePrefix;
+	@Value("${site.title}")
+	private String siteTitle;
+	@Value("${site.description}")
+	private String siteDescription;
+	@Value("${site.resources.path}")
+	private String resourcesPath;
+	
+	@Value("${facebook.appId}")
+	private String facebookAppId;
+	@Value("${accountkit.api.version}")
+	private String apiVersion;
+	@Value("${accountkit.appSecret}")
+    private String appSecret;
+	
+	@Value("${system.domain-file}")
+	private String domainFile;
+	@Value("${site.domain:}")
+	private String siteDomain;
+	
+	@Autowired
+	private ProductService productService;
+	@Autowired
+	private ProfileRepo profileRepo;
+	@Autowired
+	private CartRepo cartRepo;
+	@Autowired
+	private UserStatRepo userStatRepo;
+	@Autowired
+	private UserSocialRepo userSocialRepo;
+	
+	@ModelAttribute
+	public void addAttributes(Model model, HttpServletRequest req) {
+		initConfig(model, req);
+		getProfile(model, req);
+		getCategoryList(model);
+	}
+	
+	private void initConfig(Model model, HttpServletRequest req) {
+		model.addAttribute("site_prefix", sitePrefix);
+		model.addAttribute("site_title", siteTitle);
+		model.addAttribute("site_description", siteDescription);
+		model.addAttribute("site_url", siteDomain + req.getRequestURI() + (req.getQueryString() != null ? "?" + req.getQueryString() : ""));
+		
+		model.addAttribute("resources_path", resourcesPath);
+		model.addAttribute("facebook_appId", facebookAppId);
+		model.addAttribute("accountKit_api_version", apiVersion);
+		model.addAttribute("app_secret", appSecret);
+		model.addAttribute("csrf", RandomStringUtils.random(5));
+		
+		model.addAttribute("faq", domainFile + "/vn/load/terms/FAQs.html");
+		model.addAttribute("privacyPolicy", domainFile + "/vn/load/terms/PrivacyPolicy.html");
+		model.addAttribute("termOfUse", domainFile + "/vn/load/terms/TermOfService.html");
+		model.addAttribute("deliveryPolicy", domainFile + "/vn/load/terms/DeliveryPolicy.html");
+		model.addAttribute("refundPolicy", domainFile + "/vn/load/terms/RefundPolicy.html");
+		
+		model.addAttribute("defaultCountry", "US");
+	}
+	
+	private void getCategoryList(Model model) {
+		Map<String, Object> cateMap = productService.getCategory(Calendar.getInstance().getTime());
+        @SuppressWarnings("unchecked")
+		List<CategoryResponse> cateSource = (List<CategoryResponse>)cateMap.get("categories");
+        List<CategoryResponse> cates = new LinkedList<>();
+        visitCategory(cateSource, cates, null);
+        model.addAttribute("cates", cates);
+//        model.addAttribute("brands", productService.getBrandList(0, ""));
+	}
+	
+	private void getProfile(Model model, HttpServletRequest req) {
+        UserSession userSession = null;
+        try {
+        	userSession = (UserSession) req.getAttribute("session");
+        } catch(Exception e){}
+        ProfileResponse profileRsp = null;
+        if (userSession != null) {
+        	long userId = userSession.getUserId();
+        	Profile profile = profileRepo.getById(userId);
+        	profileRsp = new ProfileResponse(profile);
+        	profileRsp.setLogged(true);
+        	UserStat userStat = userStatRepo.getByUserId(userId, false);
+        	if (userStat != null && userStat.getProductIds() != null) {
+        		profileRsp.setTotalWishList(userStat.getProductIds().size());
+        	}
+        	profileRsp.setCartSize(cartRepo.getTotalQuantity(userId));
+        	UserSocial userSocial = userSocialRepo.getByUserId(profile.getId());
+        	profileRsp.setProfileType(userSocial != null ? userSocial.getType() : SocialType.EMAIL.getType());
+        } else {
+        	profileRsp = new ProfileResponse();
+        }
+        model.addAttribute("profile", profileRsp);
+	}
+	
+	private void visitCategory(List<CategoryResponse> cateSource, List<CategoryResponse> cateTarget, Set<Integer> ids) {
+		if (cateSource == null || cateTarget == null) {
+			return;
+		}
+		if (ids == null) {
+			ids = new HashSet<>();
+		}
+		for (CategoryResponse cate: cateSource) {
+//			if (CollectionUtils.isEmpty(cate.getSubCategories())) {
+				if (!ids.contains(cate.getId())) {
+					cateTarget.add(cate);
+					ids.add(cate.getId());
+				}
+//			} else {
+				visitCategory(cate.getSubCategories(), cateTarget, ids);
+//			}
+		}
+	}
+	
+}

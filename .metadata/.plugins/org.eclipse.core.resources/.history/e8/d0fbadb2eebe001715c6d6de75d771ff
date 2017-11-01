@@ -1,0 +1,62 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+>
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/product_mini.js'"></script>
+</head>
+<body>
+	<!-- <button type="button" class="close myclose" data-dismiss="modal">&times;</button> -->
+	<div class="product-details1-area" style="padding-bottom: 20px;" th:with="comboSkuType=2">
+        <div class="row" th:if="${sku != null}" th:with="soldOut=${sku.qtyOnHand == 0}">
+            <div class="col-lg-4 col-md-12 col-sm-12 col-xs-12">
+                <div class="inner-product-details-left">
+                    <div class="tab-content">
+                        <div class="tab-pane fade active in" th:id="${sku.primaryPhotoId}">
+                            <a href="#" class="zoom ex1"><img alt="single" th:src="${sku.primaryPhoto}" class="img-responsive" style="max-height:400px"/></a>
+                        </div>
+                        <div th:each="otherPhoto,status:${sku.photos}" class="tab-pane fade in" th:id="${'photo-' + status.count}">
+                            <a href="#" class="zoom ex1"><img alt="single" th:src="${otherPhoto}" class="img-responsive" style="max-height:400px"/></a>
+                        </div>
+                    </div>
+                    <ul>
+                        <li class="active"><a th:href="${'#' + sku.primaryPhotoId}" data-toggle="tab" aria-expanded="false"><img alt="related1" th:src="${sku.primaryPhoto}" class="img-responsive" style="max-height:65px" /></a></li>
+                        <li th:each="otherPhoto,status:${sku.photos}"><a th:href="${'#photo-' + status.count}" data-toggle="tab" aria-expanded="false"><img alt="related1" th:src="${otherPhoto}" class="img-responsive" style="max-height:65px" /></a></li>
+                    </ul>
+                </div>
+            </div>
+			<div class="col-lg-8 col-md-12 col-sm-12 col-xs-12">
+                <div class="inner-product-details-right">
+                    <h3 th:text="${sku.name}"></h3>
+                    <div class="product-details-content" style="margin-top: 15px; margin-bottom: 0px;">
+                        <p><span>Availability:</span> <span th:text="${soldOut ? 'Sold out' : 'In stock'}" th:remove="tag"></span></p>
+                        <p><span>Model:</span> <span th:text="${sku.model}" th:remove="tag"></span> </p>
+                        <div th:if="${sku.type == comboSkuType}" th:remove="tag">
+                        	<p> <span>Item(s):</span>
+                        		<span th:each="skuId: ${sku.skuIds}" th:remove="tag">
+                        			<br/><span>- </span><a th:href="@{${site_prefix}+ '/product/detail/' + ${skuId}}"><span th:text="${sku.skus.get(skuId).name}" th:remove="tag"></span></a><span style="text-transform: none; font-weight: normal;" th:text="${' x ' + sku.quantities.get(skuId)}"></span>
+                        		</span>
+                        	</p>
+                        </div>
+                    </div>
+                    <p th:text="${sku.desc}"></p>
+                    <p class="price">
+                    	<span style="color: #727272; text-decoration: line-through;" th:if="${sku.retailPrice > sku.salePrice}" class="money" th:text="${sku.retailPrice}"></span> <span class="money" th:text="${sku.salePrice}"></span></p>
+                    <ul class="inner-product-details-cart">
+                        <li th:if="${soldOut == false}"><a title="Add to cart" th:onclick="'addToCartNoQuantity(' + ${sku.id} + ',\'' + ${sku.name} + '\')'">Add To Cart</a></li>
+                        <li>
+                            <div class="input-group quantity-holder" id="quantity-holder">
+                                <input th:id="${'quantity-' + sku.id}" type="text" name='quantity' class="form-control quantity-input" value="1" placeholder="1" onchange="changeQtt(this); return false;" />
+                                <div class="input-group-btn-vertical">
+                                    <button class="btn btn-default quantity-plus" type="button"><i class="fa fa-plus" aria-hidden="true"></i></button>
+                                    <button class="btn btn-default quantity-minus" type="button"><i class="fa fa-minus" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </li>
+                        <li><a th:onclick="'addToWishlist(' + ${sku.id} + ',\'' + ${sku.name} + '\')'"><i aria-hidden="true" class="fa fa-heart-o"></i></a></li>
+                    </ul>
+                </div>
+            </div>
+		</div>
+	</div>
+</body>
+</html>

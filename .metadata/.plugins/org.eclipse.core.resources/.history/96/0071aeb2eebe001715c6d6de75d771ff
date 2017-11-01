@@ -1,0 +1,142 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/profile.js'"></script>
+	<style type="text/css">
+		form select {
+			height: 34px !important;
+		}
+	</style>
+</head>
+<body>
+	<div layout:fragment="content">
+		
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>My Account</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + '/index'}">Home</a> /</li>
+		                        <li>Account</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		<div class="product-details1-area">
+		    <div class="container">
+		        <div class="row">
+					<div class="col-lg-9 col-md-9 col-sm-12 col-xs-12 col-md-push-3">
+			            <div class="inner-shop-details">
+			                <div class="product-details-info-area">
+			                    <div class="row">
+			                        <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+			                            <h3>Update Account Information</h3>
+			                            
+			                            <form class="form-horizontal" id="profileFrmId">
+			                                <!-- <div class="form-group">
+			                                    <label class="col-sm-3 control-label"><span>Loyalty Points: </span></label>
+			                                    <div class="col-sm-6">
+			                                        <p class="form-control-static"><b class="number" th:text="${profile.point}"></b></p>
+			                                    </div>
+			                                </div> -->
+			                                <div class="form-group">
+			                                    <label for="email" class="col-sm-3 control-label">
+			                                        <span>Email Address <b style="color: red;">*</b></span>
+			                                    </label>
+			                                    <div class="col-sm-6">
+			                                        <input type="email" name="email" id="emailIptId" class="form-control" th:value="${profile.email}" required="required" th:readonly="${profile.profileType == emailLogin ? 'readonly' : 'false'}"/>
+			                                    </div>
+			                                </div>
+			                                <div class="form-group">
+			                                    <label for="firstName" class="col-sm-3 control-label">
+			                                        <span>First Name <b style="color: red;">*</b></span>
+			                                    </label>
+			                                    <div class="col-sm-6">
+			                                        <input type="text" name="firstName" id="firstNameIptId" class="form-control" th:value="${profile.firstName}" required="required" />
+			                                    </div>
+			                                </div>
+			                                <div class="form-group">
+			                                    <label for="lastName" class="col-sm-3 control-label">
+			                                        <span>Last Name <b style="color: red;">*</b></span>
+			                                    </label>
+			                                    <div class="col-sm-6">
+			                                        <input type="text" name="lastName" id="lastNameIptId" class="form-control" th:value="${profile.lastName}" required="required" />
+			                                    </div>
+			                                </div>
+			
+			                                <div class="form-group" th:if="${profile.profileType == accountKitLogin}">
+			                                    <label for="phone" class="col-sm-3 control-label">
+			                                        <span>Phone <b style="color: red;">*</b></span>
+			                                    </label>
+			                                    <div class="col-sm-6">
+			                                        <input type="tel" name="phone" id="phoneIptId" class="form-control" readonly="readonly" placeholder="xxx-xxx-xxxx" th:value="${profile.phone}" required="required" />
+			                                    </div>
+			                                </div>
+			                                <div th:if="${profile.profileType != accountKitLogin}" th:remove="tag">
+				                                <div class="form-group">
+				                                    <label for="phone" class="col-sm-3 control-label">
+				                                        <span>Phone Code<b style="color: red;">*</b></span>
+				                                    </label>
+				                                    <div class="col-sm-6">
+				                                        <select  id="phoneCodeSltId" size="1" class="form-control" style="text-align: center; height: 40px;" name="phoneCode">
+						                                    <option disabled="disabled" value="" style="text-align: center;">- Please Select Phone Code -</option>
+						                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.phoneCode}" th:text="${country.phoneCode}" th:selected="${profile.countryCode == country.phoneCode} ? selected"></option>
+						                                </select>
+					                                </div>
+				                                </div>
+				                                
+				                                <div class="form-group">
+				                                    <label for="phone" class="col-sm-3 control-label">
+				                                        <span>Phone <b style="color: red;">*</b></span>
+				                                    </label>
+				                                    <div class="col-sm-6">
+				                                        <input type="tel" name="phone" id="phoneIptId" class="form-control" placeholder="xxx-xxx-xxxx" th:value="${profile.nationalNumber}" required="required" />
+				                                    </div>
+				                                </div>
+			                                </div>
+			                                
+			                                <div class="form-group">
+					                            <label for="country" class="col-sm-3 control-label">
+					                                <span>Country <b style="color: red;">*</b></span>
+					                            </label>
+					                            <div class="col-sm-6">
+					                                <select  id="countrySltId" size="1" class="form-control" style="text-align: center; height: 40px;" name="countryCode" required="required">
+					                                    <option disabled="disabled" style="text-align: center;">--- Please Select Country ---</option>
+					                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.isoCode}" th:text="${country.name}" th:selected="${profile.address != null and country.isoCode == profile.address.countryCode} ? selected"></option>
+					                                </select>
+					                            </div>
+					                        </div>
+			
+			                                <!-- <div class="form-group" style="display: none;">
+			                                    <label for="discountCode" class="col-sm-3 control-label"> <span>Discount-Code</span>
+			                                    </label>
+			                                    <div class="col-sm-6">
+			                                        <input type="text" name="discountCode" id="discountCode" class="form-control" placeholder="Valid discount-code from your sale representative only"
+			                                               value="{{DISCOUNT_CODE}}" />
+			                                    </div>
+			                                </div> -->
+			                                <div class="form-group">
+			                                    <div class="col-sm-offset-3 col-sm-6">
+			                                        <input type="submit" class="btn btn-primary" value="Update" />
+			                                    </div>
+			                                </div>
+			                            </form>
+			                            
+			                        </div>
+			                    </div>							
+			                </div>							
+			                
+			            </div>
+			        </div>
+		            <div th:replace="fragments :: profile_navigation(active='profile')"></div>						
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

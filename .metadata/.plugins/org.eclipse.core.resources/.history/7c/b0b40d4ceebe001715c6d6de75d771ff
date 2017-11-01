@@ -1,0 +1,51 @@
+package com.mit.responses;
+
+import com.mit.user.entities.Profile;
+
+public class ProfileResponse extends com.mit.user.responses.ProfileResponse {
+	private boolean isLogged;
+	private int cartSize;
+	private int totalWishList;
+	private int profileType;
+	
+	public ProfileResponse() {
+		super();
+	}
+	
+	public ProfileResponse(Profile profile) {
+		super(profile);
+	}
+
+	public boolean isLogged() {
+		return isLogged;
+	}
+
+	public void setLogged(boolean isLogged) {
+		this.isLogged = isLogged;
+	}
+
+	public int getCartSize() {
+		return cartSize;
+	}
+
+	public void setCartSize(int cartSize) {
+		this.cartSize = cartSize;
+	}
+
+	public int getTotalWishList() {
+		return totalWishList;
+	}
+
+	public void setTotalWishList(int totalWishList) {
+		this.totalWishList = totalWishList;
+	}
+
+	public int getProfileType() {
+		return profileType;
+	}
+
+	public void setProfileType(int profileType) {
+		this.profileType = profileType;
+	}
+
+}

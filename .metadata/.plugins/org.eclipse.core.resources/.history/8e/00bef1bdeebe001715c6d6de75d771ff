@@ -1,0 +1,556 @@
+var defaultCountry = "US";
+var activeSectionId = "";
+var checkoutToken = "";
+var paymentOptionDefault = 1;
+var checkoutPayment = {};
+
+$(function () {
+    var sections = [
+		{
+		    "id": "shipping-info-section",
+		    "content": "#collapse-shipping-infomation",
+		    "message": "Please fill out a shipping address and pick a shipping method to complete purchase."
+		},
+        {
+            "id": "billing-info-section",
+            "content": "#collapse-billing-details",
+            "message": "Please fill out a billing address to complete purchase."
+        },
+        {
+            "id": "payment-info-section",
+            "content": "#collapse-payment-option",
+            "message": "Complete"
+        }
+    ];
+    
+    for (var i = 0; i < sections.length; i++) {
+        var currSection = sections[i];
+        if (activeSectionId == currSection.id) {
+            $(currSection.content).addClass("in");
+            scrollToSection($('#' + activeSectionId));
+            for (var j = i + 1; j < sections.length; j++) {
+                $(sections[j].content + " .panel-body .row").html(currSection.message);
+                $(sections[j].content).addClass("in");
+            }
+            break;
+        }
+    }
+    
+    $('#countrySltId').change(function() {
+    	renderState($('#stateSltId'), $(this).val());
+    });
+    
+    $('#countrySASltId').change(function() {
+    	renderState($('#stateSASltId'), $(this).val());
+    });
+
+    $('#editBABtnId').click(function (event) {
+        event.preventDefault();
+
+        var id = $("#billingAddressSltId").val();
+
+        if ($("#billing_form").css("display") == 'none' && id) {
+        	var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+	    	App.ajaxRequest('GET', url, "", function(resp) {
+	    		var address = resp.data;
+				if (address) {
+					$('#addressIdIptId').val(address.id);
+			    	$('#firstNameIptId').val(address.firstName);
+			    	$('#lastNameIptId').val(address.lastName);
+			    	$('#phoneIptId').val(address.phone);
+			    	$('#address1IptId').val(address.addressLine1);
+			    	$('#address2IptId').val(address.addressLine2);
+			    	$('#countrySltId').val(address.countryCode);
+			    	renderState($('#stateSltId'), address.countryCode, address.state);
+			    	$('#cityIptId').val(address.city);
+			    	$('#zipCodeIptId').val(address.zipCode);
+			    	$('#defaultCbxId').prop('checked', address.isDefault);
+				}
+			});
+        }
+        $("#billing_info_summary").toggle();
+        $("#billing_form").toggle(function () {
+            $(this).removeClass('hide');
+        });
+    });
+    
+    $('#billing_form').submit(function(e) {
+    	var id = $('#addressIdIptId').val();
+    	var firstName = $('#firstNameIptId').val();
+    	var lastName = $('#lastNameIptId').val();
+    	var phone = $('#phoneIptId').val();
+    	var address1 = $('#address1IptId').val();
+    	var address2 = $('#address2IptId').val();
+    	var countryCode = $('#countrySltId').val();
+    	var country = $('#countrySltId option[value="' + countryCode + '"]').text();
+    	var stateCode = $('#stateSltId').val();
+    	var state = stateCode ? $('#stateSltId option[value="' + stateCode + '"]').text() : '';
+    	var city = $('#cityIptId').val();
+    	var zipCode = $('#zipCodeIptId').val();
+    	var isDefault = $('#defaultCbxId').prop('checked');
+		var data = {"addressLine1": address1,
+				  "addressLine2": address2,
+				  "checkoutToken": "",
+				  "city": city,
+				  "country": country,
+				  "countryCode": countryCode,
+				  "default": isDefault,
+				  "firstName": firstName,
+				  "lastName": lastName,
+				  "phone": phone,
+				  "state": state,
+				  "stateCode": stateCode,
+				  "zipCode": zipCode};
+		if (id && id > 0) {
+			var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+			App.ajaxRequest('PUT', url, data, function(resp) {
+				var errors = [App.errors.ADDRESS_NOT_EXIST, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.checkout);
+			});
+		} else {
+			var url = App.getFullUri(App.uris.billingAddressItem);
+			App.ajaxRequest('POST', url, data, function(resp) {
+				var errors = [App.errors.LIMIT_ADDRESS, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.checkout);
+			});
+		}
+		
+		return false;
+	});
+    
+    $('#billingAddressSltId').change(function() {
+    	var id = $(this).val();
+    	if (id) {
+	    	$('#addressIdIptId').val(id);
+	    	var url = App.getFullUri(App.uris.billingAddressItem + "/" + id);
+	    	App.ajaxRequest('GET', url, "", function(resp) {
+	    		var address = resp.data;
+				if (address) {
+					$('#addressIdIptId').val(address.id);
+			    	$('#firstNameIptId').val(address.firstName);
+			    	$('#lastNameIptId').val(address.lastName);
+			    	$('#phoneIptId').val(address.phone);
+			    	$('#address1IptId').val(address.addressLine1);
+			    	$('#address2IptId').val(address.addressLine2);
+			    	$('#countrySltId').val(address.countryCode);
+			    	renderState($('#stateSltId'), address.countryCode, address.stateCode);
+			    	$('#cityIptId').val(address.city);
+			    	$('#zipCodeIptId').val(address.zipCode);
+			    	$('#defaultCbxId').prop('checked', address.isDefault);
+				}
+			});
+    	} else {
+    		$('#addressIdIptId').val("");
+	    	$('#firstNameIptId').val("");
+	    	$('#lastNameIptId').val("");
+	    	$('#phoneIptId').val("");
+	    	$('#address1IptId').val("");
+	    	$('#address2IptId').val("");
+	    	$('#countrySltId').val(defaultCountry);
+	    	renderState($('#stateSltId'), defaultCountry);
+	    	$('#cityIptId').val("");
+	    	$('#zipCodeIptId').val("");
+	    	$('#defaultCbxId').prop('checked', false);
+    	}
+    });
+
+
+
+    $("#editSABtnId").click(function (event) {
+    	event.preventDefault();
+
+        var id = $("#shippingAddressSltId").val();
+
+        if ($("#shipping_form").css("display") == 'none' && id) {
+        	var url = App.getFullUri(App.uris.shippingAddressItem + "/" + id);
+	    	App.ajaxRequest('GET', url, "", function(resp) {
+	    		var address = resp.data;
+				if (address) {
+					$('#addressIdSAIptId').val(address.id);
+			    	$('#firstNameSAIptId').val(address.firstName);
+			    	$('#lastNameSAIptId').val(address.lastName);
+			    	$('#businessNameSAIptId').val(address.businessName);
+			    	$('#phoneSAIptId').val(address.phone);
+			    	$('#address1SAIptId').val(address.addressLine1);
+			    	$('#address2SAIptId').val(address.addressLine2);
+			    	$('#countrySASltId').val(address.countryCode);
+			    	renderState($('#stateSASltId'), address.countryCode, address.stateCode);
+			    	$('#citySAIptId').val(address.city);
+			    	$('#zipCodeSAIptId').val(address.zipCode);
+			    	$('#defaultSACbxId').prop('checked', address.isDefault);
+				}
+			});
+        }
+        
+        $("#shipping_info_summary").toggle();
+        $("#shipping_form").toggle(function () {
+            $(this).removeClass('hide');
+        });
+    });
+
+    $('#shipping_form').submit(function(e) {
+    	var id = $('#addressIdSAIptId').val();
+    	var firstName = $('#firstNameSAIptId').val();
+    	var lastName = $('#lastNameSAIptId').val();
+    	var businessName = $('#businessNameSAIptId').val();
+    	var phone = $('#phoneSAIptId').val();
+    	var address1 = $('#address1SAIptId').val();
+    	var address2 = $('#address2SAIptId').val();
+    	var countryCode = $('#countrySASltId').val();
+    	var country = $('#countrySASltId option[value="' + countryCode + '"]').text();
+    	var stateCode = $('#stateSASltId').val();
+    	var state = stateCode ? $('#stateSASltId option[value="' + stateCode + '"]').text() : '';
+    	var city = $('#citySAIptId').val();
+    	var zipCode = $('#zipCodeSAIptId').val();
+    	var isDefault = $('#defaultSACbxId').prop('checked');
+		var data = {"addressLine1": address1,
+				  "addressLine2": address2,
+				  "checkoutToken": "",
+				  "city": city,
+				  "country": country,
+				  "countryCode": countryCode,
+				  "default": isDefault,
+				  "firstName": firstName,
+				  "lastName": lastName,
+				  "businessName": businessName,
+				  "phone": phone,
+				  "state": state,
+				  "stateCode": stateCode,
+				  "zipCode": zipCode};
+		if (id && id > 0) {
+			var url = App.getFullUri(App.uris.shippingAddressItem + "/" + id);
+			App.ajaxRequest('PUT', url, data, function(resp) {
+				var errors = [App.errors.ADDRESS_NOT_EXIST, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.checkout);
+			});
+		} else {
+			var url = App.getFullUri(App.uris.shippingAddressItem);
+			App.ajaxRequest('POST', url, data, function(resp) {
+				var errors = [App.errors.LIMIT_ADDRESS, App.errors.STATE_INVALID, App.errors.ZIPCODE_INVALID];
+				App.callbackAjaxRequest(resp, errors, App.uris.checkout);
+			});
+		}
+		
+		return false;
+	});
+    
+    $('#shippingAddressSltId').change(function() {
+    	var id = $(this).val();
+    	if (id) {
+	    	$('#addressIdSAIptId').val(id);
+	    	var url = App.getFullUri(App.uris.shippingAddressItem + "/" + id);
+	    	App.ajaxRequest('GET', url, "", function(resp) {
+	    		var address = resp.data;
+				if (address) {
+					$('#addressIdSAIptId').val(address.id);
+			    	$('#firstNameSAIptId').val(address.firstName);
+			    	$('#lastNameSAIptId').val(address.lastName);
+			    	$('#businessNameSAIptId').val(address.businessName);
+			    	$('#phoneSAIptId').val(address.phone);
+			    	$('#address1SAIptId').val(address.addressLine1);
+			    	$('#address2SAIptId').val(address.addressLine2);
+			    	$('#countrySASltId').val(address.countryCode);
+			    	renderState($('#stateSASltId'), address.countryCode, address.stateCode);
+			    	$('#citySAIptId').val(address.city);
+			    	$('#zipCodeSAIptId').val(address.zipCode);
+			    	$('#defaultSACbxId').prop('checked', address.isDefault);
+				}
+			});
+    	} else {
+    		$('#addressIdSAIptId').val("");
+	    	$('#firstNameSAIptId').val("");
+	    	$('#lastNameSAIptId').val("");
+	    	$('#businessNameSAIptId').val("");
+	    	$('#phoneSAIptId').val("");
+	    	$('#address1SAIptId').val("");
+	    	$('#address2SAIptId').val("");
+	    	$('#countrySASltId').val(defaultCountry);
+	    	renderState($('#stateSASltId'), defaultCountry);
+	    	$('#citySAIptId').val("");
+	    	$('#zipCodeSAIptId').val("");
+	    	$('#defaultSACbxId').prop('checked', false);
+    	}
+    });
+
+    $('select[name="countryCode"]').val(defaultCountry).change();
+    
+    $('input[name="paymentMethodIptName"]').click(function () {
+        var id = $(this).attr("id");
+        if (id == "paymentMethodCreditId") {
+            showCreditCartDiv();
+        } else {
+            hideCreditCartDiv();
+        }
+        if (id == "paymentMethodPaypalId") {
+        	showPaypalDiv();
+        } else {
+        	hidePaypalDiv()
+        }
+    });
+    
+    if ($('input[name="paymentMethodIptName"]').length == 1) {
+    	var $firstMethod = $($('input[name="paymentMethodIptName"]')[0]);
+    	$firstMethod.prop('checked', true);
+    	var id = $firstMethod.attr("id");
+        if (id == "paymentMethodCreditId") {
+            showCreditCartDiv();
+        } else {
+            hideCreditCartDiv();
+        }
+        if (id == "paymentMethodPaypalId") {
+        	showPaypalDiv();
+        } else {
+        	hidePaypalDiv();
+        }
+    }
+    
+  //checkout promotion code
+    $('#PromoCodeFmId').submit(function(e) {
+    	var shippingAddressId = $('#addressIdSAIptId').val();
+    	var shippingOptionId = $("input[name='shippingOptionIptName']:checked").val();
+    	var billingAddressId = $('#addressIdIptId').val();
+    	var paymentOptionId = paymentOptionDefault;
+    	var promoCode = $('#promoCodeIptId').val();
+    	var cardCode = "";
+    	var cardNumber = "";
+    	var cardCode = "";
+    	var expirationDate = "";
+//    	var usePoint = $('#usePointCbxId').prop('checked');
+    	var usePoint = false;
+    	var data = {
+    		  "accountName": "",
+    		  "accountNumber": "",
+    		  "billingAddressId": billingAddressId,
+    		  "cardCode": cardCode,
+    		  "cardNumber": cardNumber,
+    		  "checkoutToken": checkoutToken,
+    		  "expirationDate": expirationDate,
+    		  "paymentOptionId": paymentOptionId,
+    		  "promoCode": promoCode,
+    		  "routingNumber": "",
+    		  "shippingAddressId": shippingAddressId,
+    		  "shippingOptionId": shippingOptionId,
+    		  "usePoint": usePoint
+    		}
+    	var url = App.getFullUri(App.uris.checkoutPayment);
+    	var noNotify = promoCode == '';
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.INVALID_CHECKOUT_TOKEN, App.errors.SHIPPING_OPTION_NOT_EXIST, App.errors.INVALID_PAYMENT_OPTION, App.errors.INVALID_PROMO_CODE, App.errors.BILLING_ADDRESS_NOT_EXIST, App.errors.INVALID_CARD_NUMBER, App.errors.INVALID_CARD_CODE, App.errors.INVALID_EXPIRATION_DATE, App.errors.PAYMENT_ERROR, App.errors.SOLD_OUT, App.errors.CANT_USE_PROMO];
+			if (resp.code >= 0) {
+				updateOrder(resp.data);
+			} else {
+				updateOrder(checkoutPayment);
+				$('#promoCodeIptId').val('');
+			}
+			App.callbackAjaxRequest(resp, errors, '', '', '', noNotify);
+		});
+    	return false;
+    });
+    
+    //checkout point
+    $('#usePointCbxId').change(function(e) {
+		var shippingAddressId = $('#addressIdSAIptId').val();
+    	var shippingOptionId = $("input[name='shippingOptionIptName']:checked").val();
+    	var billingAddressId = $('#addressIdIptId').val();
+    	var paymentOptionId = paymentOptionDefault;
+    	var promoCode = $('#promoCodeIptId').val();
+    	var cardCode = "";
+    	var cardNumber = "";
+    	var cardCode = "";
+    	var expirationDate = "";
+    	var usePoint = $('#usePointCbxId').prop('checked');
+    	var data = {
+    		  "accountName": "",
+    		  "accountNumber": "",
+    		  "billingAddressId": billingAddressId,
+    		  "cardCode": cardCode,
+    		  "cardNumber": cardNumber,
+    		  "checkoutToken": checkoutToken,
+    		  "expirationDate": expirationDate,
+    		  "paymentOptionId": paymentOptionId,
+    		  "promoCode": promoCode,
+    		  "routingNumber": "",
+    		  "shippingAddressId": shippingAddressId,
+    		  "shippingOptionId": shippingOptionId,
+    		  "usePoint": usePoint
+    		}
+    	var url = App.getFullUri(App.uris.checkoutPayment);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.INVALID_CHECKOUT_TOKEN, App.errors.SHIPPING_OPTION_NOT_EXIST, App.errors.INVALID_PAYMENT_OPTION, App.errors.INVALID_PROMO_CODE, App.errors.BILLING_ADDRESS_NOT_EXIST, App.errors.INVALID_CARD_NUMBER, App.errors.INVALID_CARD_CODE, App.errors.INVALID_EXPIRATION_DATE, App.errors.PAYMENT_ERROR, App.errors.SOLD_OUT];
+			if (resp.code >= 0) {
+				updateOrder(resp.data);
+			}
+			App.callbackAjaxRequest(resp, errors, '', '', '', !usePoint);
+		});
+    	return false;
+    });
+    
+    //checkout
+    $('#checkoutFrmId').submit(function(e) {
+    	var data = getCheckoutData();
+    	var url = App.getFullUri(App.uris.checkoutConfirm);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.INVALID_CHECKOUT_TOKEN, App.errors.SHIPPING_OPTION_NOT_EXIST, App.errors.INVALID_PAYMENT_OPTION, App.errors.INVALID_PROMO_CODE, App.errors.BILLING_ADDRESS_NOT_EXIST, App.errors.INVALID_CARD_NUMBER, App.errors.INVALID_CARD_CODE, App.errors.INVALID_EXPIRATION_DATE, App.errors.PAYMENT_ERROR, App.errors.SOLD_OUT,App.errors.CANT_USE_PROMO];
+			var msgError = "";
+			if (resp.code == App.errors.SOLD_OUT.value) {
+				msgError = "Your shopping cart has sold out product. Please update cart before check out!";
+			}
+			var orderNumber = "";
+			if (resp.code >= 0 && resp.data) {
+				orderNumber = resp.data.orderNumber;
+			}
+			App.callbackAjaxRequest(resp, errors, App.uris.orderItem + "?orderNumber=" + orderNumber, "Your order was submitted successfully. Thank for your business!", msgError);
+		});
+    	return false;
+    });
+});
+
+function getCheckoutData() {
+	var shippingAddressId = $('#addressIdSAIptId').val();
+	var shippingOptionId = $("input[name='shippingOptionIptName']:checked"). val();
+	var billingAddressId = $('#addressIdIptId').val();
+	var paymentOptionId = $("input[name='paymentMethodIptName']:checked"). val();
+	var promoCode = $('#promoCodeIptId').val();
+	var cardCode = $('#cardCodeIptId').val();
+	var cardNumber = $('#cardNumberIptId').val();
+	var cardCode = $('#cardCodeIptId').val();
+	var expirationDate = $('#cardExpMonthSltId').val() + "/" + $('#cardExpYearSltId').val();
+//	var usePoint = $('#usePointCbxId').prop('checked');
+	var usePoint = false;
+	var data = {
+		  "accountName": "",
+		  "accountNumber": "",
+		  "billingAddressId": billingAddressId,
+		  "cardCode": cardCode,
+		  "cardNumber": cardNumber,
+		  "checkoutToken": checkoutToken,
+		  "expirationDate": expirationDate,
+		  "paymentOptionId": paymentOptionId,
+		  "promoCode": promoCode,
+		  "routingNumber": "",
+		  "shippingAddressId": shippingAddressId,
+		  "shippingOptionId": shippingOptionId,
+		  "usePoint": usePoint
+		}
+	return data;
+}
+
+function showPaypalDiv() {
+	$('#paypalDivId').show();
+	$('#checkoutFrmId input[type=submit]').hide();
+}
+
+function hidePaypalDiv() {
+	$('#paypalDivId').hide();
+	$('#checkoutFrmId input[type=submit]').show();
+}
+
+function showCreditCartDiv() {
+	$('#cardNameIptId').prop('required', true);
+	$('#cardNumberIptId').prop('required', true);
+	$('#cardCodeIptId').prop('required', true);
+	$('#cardExpMonthSltId').prop('required', true);
+	$('#cardExpYearSltId').prop('required', true);
+	$("#creditCardDivId").show();
+}
+
+function hideCreditCartDiv() {
+	$('#cardNameIptId').prop('required', false);
+	$('#cardNumberIptId').prop('required', false);
+	$('#cardCodeIptId').prop('required', false);
+	$('#cardExpMonthSltId').prop('required', false);
+	$('#cardExpYearSltId').prop('required', false);
+	$("#creditCardDivId").hide();
+}
+
+function renderState($stateEle, countryCode, stateValue) {
+	var data = "";
+	$stateEle.html('<option selected="selected" disabled="disabled" value="" style="text-align: center;">Select state</option>');
+	var url = App.getFullUri(App.uris.state + "?country=" + countryCode);
+	App.ajaxRequest('GET', url, data, function(resp) {
+		var states = resp.data;
+		for (var i=0; i < states.length; i++) {
+			var state = states[i];
+			$stateEle.append('<option value="' + state.code + '" style="text-align: center;">' + state.name + '</option>');
+		}
+		if (stateValue) {
+			$stateEle.val(stateValue);
+		}
+	});
+}
+
+function scrollToSection($sectionId) {
+	if ($sectionId.length > 0) {
+		$(document.body).animate({
+			'scrollTop' : $sectionId.offset().top
+		}, 1000);
+	}
+}
+
+function updateOrder(checkoutPayment) {
+	if (checkoutPayment) {
+		$('#subTotalId').text(checkoutPayment.subtotal);
+		$('#discountTotalId').text(checkoutPayment.totalDiscount);
+		$('#orderTotalId').text(checkoutPayment.orderTotal);
+		$('#taxId').text(checkoutPayment.totalTax);
+		$('.shippingTotal').each(function(key, value) {
+			if (checkoutPayment.subtotal > 1500) {
+				$(value).text(checkoutPayment.subtotal > 1500 ? '-' : checkoutPayment.shippingCost);
+				$(value).removeClass('money');
+			} else {
+				$(value).text(checkoutPayment.shippingCost);
+				$(value).addClass('money');
+			}
+		});
+		$('#pointId').text(checkoutPayment.cartPoint);
+//		if (checkoutPayment.cart && checkoutPayment.cart.cartItems) {
+//			var items = checkoutPayment.cart.cartItems;
+//			for (var i=0;i<items.length;i++) {
+//				$('#' + items[i].sku.id + '-salePriceId').text(items[i].sku.salePrice);
+//				$('#' + items[i].sku.id + '-totalPriceId').text(items[i].totalPrice);
+//			}
+//		}
+		App.formatMoney();
+		App.formatNumber();
+	}
+	scrollToSection($('#order-summary-section'));
+}
+
+var orderId = '';
+function createPaypalPayment() {
+	var data = getCheckoutData();
+	var url = App.getFullUri(App.uris.checkoutConfirm);
+	App.sajaxRequest('POST', url, data, function(resp) {
+		var errors = [App.errors.INVALID_CHECKOUT_TOKEN, App.errors.SHIPPING_OPTION_NOT_EXIST, App.errors.INVALID_PAYMENT_OPTION, App.errors.INVALID_PROMO_CODE, App.errors.BILLING_ADDRESS_NOT_EXIST, App.errors.INVALID_CARD_NUMBER, App.errors.INVALID_CARD_CODE, App.errors.INVALID_EXPIRATION_DATE, App.errors.PAYMENT_ERROR, App.errors.SOLD_OUT,App.errors.CANT_USE_PROMO];
+		var msgError = "";
+		if (resp.code >= 0 && resp.data) {
+			orderId = resp.data.id;
+		} else {
+			if (resp.code == App.errors.SOLD_OUT.value) {
+				msgError = "Your shopping cart has sold out product. Please update cart before check out!";
+			}
+			App.callbackAjaxRequest(resp, errors, "", "Your order was submitted successfully. Thank for your business!", msgError);
+		}
+	});
+	if (orderId > 0) {
+		return paypal.request.post(App.getFullUri(App.uris.checkoutPaypalCreatePayment), {'orderId': orderId}).then(function(data) {
+	        return data.paymentId;
+	    });
+	}
+}
+
+function executePaypalPayment(paypalData) {
+	return paypal.request.post(App.getFullUri(App.uris.checkoutPaypalExePayment), {
+        'paymentID': paypalData.paymentID,
+        'payerID': paypalData.payerID,
+        'orderId': orderId
+    }).then(function(data) {
+    	if (data.code >= 0) {
+    		$.notify('success', "Your order was submitted successfully. Thank for your business!", function() {
+				App.redirect(App.uris.orderItem + "?orderNumber=" + data.data.orderNumber);
+			});
+    	} else {
+    		$.notify('danger', "Payment Error.");
+    	}
+    });
+}

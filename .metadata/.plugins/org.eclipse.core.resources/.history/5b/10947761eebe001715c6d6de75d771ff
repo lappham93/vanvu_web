@@ -1,0 +1,103 @@
+package com.mit.controllers;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.address.repositories.CountryRepo;
+import com.mit.define.ApiError;
+import com.mit.errcode.UserErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.session.SessionManagerImpl;
+import com.mit.session.entities.UserSession;
+import com.mit.session.services.ProfileCacheService;
+import com.mit.user.bodies.PasswordBody;
+import com.mit.user.bodies.ProfileBody;
+import com.mit.user.entities.Profile;
+import com.mit.user.repositories.ProfileRepo;
+import com.mit.user.responses.ProfileResponse;
+import com.mit.user.services.LoginService;
+import com.mit.utils.ControllerUtils;
+
+import io.swagger.annotations.ApiOperation;
+
+@Controller
+@RestController
+@RequestMapping(value = "profile")
+public class ProfileController {
+	
+	@Autowired
+	private CountryRepo countryRepo;
+	@Autowired
+	private ProfileRepo profileRepo;
+	@Autowired
+	private SessionManagerImpl sessionManagerImpl;
+	@Autowired
+	private ProfileCacheService profileCacheService;
+	@Autowired
+	private LoginService loginService;
+	
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView render(HttpServletRequest req) {
+		ModelAndView mav = ControllerUtils.initPage("profile", null, "");
+		mav.addObject("countries", countryRepo.getList());
+		return mav;
+	}
+	
+	@ApiOperation(value = "update profile", notes = "UNABLE_CHANGE_NAME(-315), INVALID_MEMBERSHIP_CODE(-327)")
+	@RequestMapping(value = "", method = RequestMethod.PUT)
+	public ApiResponse<ProfileResponse> updateProfile(HttpServletRequest request, @RequestBody ProfileBody body) {
+		ApiResponse<ProfileResponse> rs = new ApiResponse<>();
+		try {
+			UserSession us = (UserSession) request.getAttribute("session");
+			Profile profile = profileRepo.getById(us.getUserId());
+			body.updateProfile(profile);
+			profileRepo.save(profile);
+			rs.setData(new ProfileResponse(profile));
+//				sessionManagerImpl.expireAllUserSession(us.getUserId(), Profile.class);
+//				profileCacheService.deleteCache(us.getUserId());
+		} catch (Exception e) {
+			rs.setCode(ApiError.SERVER_ERROR.getValue());
+		}
+		
+		return rs;
+	}
+	
+	@RequestMapping(value = "/password", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderPassword(HttpServletRequest req) {
+		ModelAndView mav = ControllerUtils.initPage("password", null, "");
+		return mav;
+	}
+	
+	@ApiOperation(value = "change password", notes = "UNABLE_CHANGE_NAME(-315), INVALID_MEMBERSHIP_CODE(-327)")
+	@RequestMapping(value = "/password", method = RequestMethod.POST)
+	public ApiResponse<Object> changePassword(HttpServletRequest request, @RequestBody PasswordBody body) {
+		try {
+			UserSession us = (UserSession) request.getAttribute("session");
+			int err = loginService.changePassword(us.getUserId(), body.getCurrentPassword(), body.getNewPassword(), body.getNewPasswordConfirm());
+			if (err == UserErrCode.SUCCESS) {
+				return new ApiResponse<>(ApiError.SUCCESS);
+			}
+			if (err == UserErrCode.UN_AUTORIZED) {
+				return new ApiResponse<>(ApiError.SERVER_ERROR);
+			}
+			if (err == UserErrCode.ERR_PASSWORD || err == UserErrCode.PASSWORD_WEAK
+					|| err == UserErrCode.ERR_REPEAT_PASSWORD) {
+				return new ApiResponse<>(ApiError.PARAMS_INVALID);
+			}
+		} catch (Exception e) {
+		}
+		
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+	
+}

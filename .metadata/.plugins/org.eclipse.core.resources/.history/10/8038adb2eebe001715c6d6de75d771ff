@@ -1,0 +1,84 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+</head>
+<body>
+	<div layout:fragment="content" th:with="statusOnHold=1, statusCanceled=2, statusPending=3, statusReceived=4, statusPackaging=5, statusShipped=6, statusArchived=7, statusReturn=8">
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>My Account</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + '/index'}">Home</a> /</li>
+		                        <li><a th:href="@{${site_prefix} + '/profile'}">Account</a> /</li>
+		                        <li>Order History</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		<div class="product-details1-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-9 col-md-9 col-sm-12 col-xs-12 col-md-push-3">
+		                <div class="inner-shop-details">
+		                    <div class="product-details-info-area">
+		                        <div class="row">
+		                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                                <div class="form-group">
+		                                    <h3><span>Order History</span></h3>
+		                                </div>
+		                                <div class="clearfix"></div>
+		
+		                                <div class="table-responsive">
+		                                    <table class="table table-bordered">
+		                                        <thead>
+		                                        <tr>
+		                                            <th class="text-center">Order Number</th>
+		                                            <th class="text-left">Date</th>
+		                                            <th class="text-left">Status</th>
+		                                            <th class="text-right">Total</th>
+		                                        </tr>
+		                                        </thead>
+		                                        <tbody>
+		                                        <tr th:each="order: ${orders}">
+		                                            <td class="text-center"><a th:href="@{${site_prefix} + '/order/detail'(orderNumber=${order.orderNumber})}" th:text="${order.orderNumber}"></a></td>
+		                                            <td th:with="date=${new java.util.Date(order.createTime)},dateTime=${#dates.format(#calendars.createForTimeZone(#calendars.year(date), #calendars.month(date), #calendars.day(date), #calendars.hour(date), #calendars.minute(date), #calendars.second(date), 'PST'), 'MM/dd/yyyy - hh:mm:ss')}" th:text="${dateTime}"></td>
+		                                            <td th:with="status=${order.status == statusOnHold ? 'On Hold' : (order.status == statusCanceled ? 'Cancel' : 
+		                                            (order.status == statusPending ? 'Payment Pending' : (order.status == statusReceived ? 'Payment Received' : (order.status == statusPackaging ? 'Packaging' : 
+		                                            (order.status == statusShipped ? 'Shipped' : (order.status == statusArchived ? 'Finished' : (order.status == statusReturn ? 'Returned' : '')))))))}" th:text="${status}"></td>
+		                                            <td class="text-right price-total money" th:text="${order.orderTotal}"></td>
+		                                        </tr>
+		                                        <tr th:if="${orders == null or #lists.size(orders) == 0}">
+		                                            <td class="text-center" colspan="6">Not item found.</td>
+		                                        </tr>
+		                                        </tbody>
+		                                    </table>
+		                                    <div class="navbar navbar-pagination">
+									            <div id="paging" class="dataTables_paginate paging_bootstrap_alt pagination" style="text-align: right;" th:text="${paging}">
+									            </div>
+									        </div>
+									        <script type="text/javascript">
+										        try{
+										            zscommon.renderPaging('paging','','','','');
+										        }catch(e){}
+									        </script>
+		                                </div>
+		                                
+		                            </div>
+		                        </div>							
+		                    </div>
+		                    
+		                </div>
+		            </div>
+		            <div th:replace="fragments :: profile_navigation(active='order')"></div>	
+		        </div>
+		    </div>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+package com.mit.utils;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.mit.app.enums.AppType;
+import com.mit.http.context.ApplicationContextProvider;
+import com.mit.http.session.SessionManager;
+import com.mit.sessions.SiteSession;
+import com.mit.user.responses.LoginToken;
+import com.mit.user.services.LoginService;
+
+/**
+ * Created by Hung Le on 2/13/17.
+ */
+public class SiteAuthenticationFilter<T> implements Filter {
+	private Logger logger = LoggerFactory.getLogger("AuthenticationFilter");
+    private final SessionManager<T> sessionManager;
+    List<String> excludes = new ArrayList<>();
+    private String className = "";
+    private String unauthUri = "";
+
+    public SiteAuthenticationFilter(SessionManager<T> sessionManager) {
+        this.sessionManager = sessionManager;
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        String excludePatterns = filterConfig.getInitParameter("excludePatterns");
+        className = filterConfig.getInitParameter("profileClass");
+        if (excludePatterns != null && !excludePatterns.isEmpty()) {
+            excludes.addAll(Arrays.asList(excludePatterns.split(",")));
+        }
+        unauthUri = filterConfig.getInitParameter("unauthUri");
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletRequest httpRequest = (HttpServletRequest)servletRequest;
+//        String sessionKey = httpRequest.getHeader("Session");
+        String sessionKey = SiteSession.getSessionKey(httpRequest);
+        String uri = httpRequest.getRequestURI();
+        logger.info("Session = " + sessionKey);
+        
+        boolean isAuthenticated = false;
+        if (uri.equals("/")) {
+            isAuthenticated = true;
+        } else {
+            for (String exclude : excludes) {
+                if (uri.startsWith(exclude)) {
+                    isAuthenticated = true;
+                    break;
+                }
+            }
+        }
+
+        if (sessionKey != null && !sessionKey.isEmpty()) {
+            String cacheKey = className + "." + sessionKey;
+            T session = sessionManager.get(cacheKey);
+
+            if (session != null) {
+                httpRequest.setAttribute("session", session);
+                httpRequest.setAttribute("sessionKey", sessionKey);
+                filterChain.doFilter(httpRequest, servletResponse);
+                return;
+            }
+        }
+        String refreshToken = SiteSession.getRefreshToken(httpRequest);
+        if (!StringUtils.isEmpty(refreshToken)) {
+        	LoginService loginService = ApplicationContextProvider.getApplicationContext().getBean(LoginService.class);
+        	LoginToken loginToken = loginService.refreshToken(refreshToken, AppType.CLIENT.getValue());
+        	if (loginToken != null && !StringUtils.isEmpty(loginToken.getSessionKey())) {
+        		SiteSession.setSession(httpRequest, loginToken.getSessionKey(), loginToken.getRefreshToken());
+                String cacheKey = className + "." + loginToken.getSessionKey();
+                T session = sessionManager.get(cacheKey);
+                if (session != null) {
+                    httpRequest.setAttribute("session", session);
+                    httpRequest.setAttribute("sessionKey", sessionKey);
+                    filterChain.doFilter(httpRequest, servletResponse);
+                    return;
+                }
+        	}
+        }
+        if (isAuthenticated) {
+            filterChain.doFilter(servletRequest, servletResponse);
+        } else {
+        	HttpServletResponse response = ((HttpServletResponse)servletResponse);
+        	if (httpRequest.getMethod().equals("GET")) {
+	            response.sendRedirect(unauthUri);
+        	} else {
+        		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        	}
+        }
+    }
+
+    @Override
+    public void destroy() {
+
+    }
+}

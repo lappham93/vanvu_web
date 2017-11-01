@@ -1,0 +1,118 @@
+package com.mit.controllers;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.address.entities.Country;
+import com.mit.address.repositories.CountryRepo;
+import com.mit.define.ApiError;
+import com.mit.errcode.UserErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.sessions.SiteSession;
+import com.mit.stat.repositories.AppStatTotalRepo;
+import com.mit.user.bodies.EmailSignup;
+import com.mit.user.bodies.SocialSignup;
+import com.mit.user.responses.LoginToken;
+import com.mit.user.services.LoginService;
+import com.mit.utils.ControllerUtils;
+
+import io.swagger.annotations.ApiOperation;
+
+@Controller
+@RequestMapping(value = "register")
+public class RegisterController {
+	Logger logger = LoggerFactory.getLogger(RegisterController.class);
+	@Autowired
+	private LoginService loginService;
+	@Autowired
+	private CountryRepo countryRepo;
+	@Autowired
+	private AppStatTotalRepo appStatRepo;
+
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView renderRegister(HttpServletRequest request,
+			@RequestParam(value = "token", required = false, defaultValue = "") String token,
+			@RequestParam(value = "type", required = false, defaultValue = "1") int type) {
+		ModelAndView mav = ControllerUtils.initPage("registerSocial", null, "");
+		List<Country> countries = countryRepo.getList();
+		mav.addObject("countries", countries);
+		if (!StringUtils.isEmpty(token)) {
+			try {
+				LoginToken loginToken = loginService.socialLogin(token, type);
+				mav.addObject("loginToken", loginToken);
+			} catch (Exception e) {
+			}
+		} else {
+			mav.setViewName("register");
+		}
+		return mav;
+	}
+
+	@ApiOperation(value = "Social register", notes = "Redirect to register if profile is null")
+	@RequestMapping(value = "/social", method = RequestMethod.POST)
+	@ResponseBody
+	public ApiResponse<LoginToken> socialRegister(HttpServletRequest request, @RequestBody SocialSignup body)
+			throws Exception {
+		String token = body.getToken();
+		int type = body.getType();
+		try {
+			LoginToken loginToken = loginService.socialLogin(token, type);
+			if (loginToken == null || loginToken.getProfile() != null) {
+				return new ApiResponse<>(-1, "Unknown error.");
+			}
+
+			loginToken = loginService.socialRegister(loginToken, body);
+			if (loginToken == null || loginToken.getProfile() == null) {
+				return new ApiResponse<>(-1, "Unknown error.");
+			}
+			SiteSession.setSession(request, loginToken.getSessionKey(), loginToken.getRefreshToken());
+			appStatRepo.updateSignUpStat(1);
+			return new ApiResponse<>(loginToken);
+		} catch (Exception e) {
+			return new ApiResponse<>(ApiError.INVALID_TOKEN);
+		}
+	}
+	
+	@ApiOperation(value = "email register", notes = "Redirect to register if profile is null")
+	@RequestMapping(value = "/email", method = RequestMethod.POST)
+	@ResponseBody
+	public ApiResponse<LoginToken> emailRegister(HttpServletRequest request, @RequestBody EmailSignup body) {
+		try {
+			Map<String, Object> registerMap = loginService.emailRegister(body);
+			int err = (int) registerMap.get("err");
+			if (err == UserErrCode.SUCCESS) {
+				LoginToken loginToken = (LoginToken) registerMap.get("loginToken");
+				SiteSession.setSession(request, loginToken.getSessionKey(), loginToken.getRefreshToken());
+				appStatRepo.updateSignUpStat(1);
+				return new ApiResponse<>(loginToken);
+			}
+			if (err == UserErrCode.MISSING_PARAMS) {
+				return new ApiResponse<>(ApiError.MISSING_PARAM);
+			}
+			if (err == UserErrCode.EMAIL_INVALID || err == UserErrCode.PASSWORD_WEAK
+					|| err == UserErrCode.ERR_REPEAT_PASSWORD) {
+				return new ApiResponse<>(ApiError.PARAMS_INVALID);
+			}
+			if (err == UserErrCode.DUPLICATE_USERNAME) {
+				return new ApiResponse<>(ApiError.USERNAME_EXIST);
+			}
+		} catch (Exception e) {
+			logger.info("Exception: ", e);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+}

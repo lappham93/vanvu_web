@@ -1,0 +1,75 @@
+package com.mit.controllers;
+
+import java.util.Arrays;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.common.Paging;
+import com.mit.define.ApiError;
+import com.mit.errcode.OrderErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.order.responses.OrderResponse;
+import com.mit.order.services.OrderService;
+import com.mit.session.entities.UserSession;
+import com.mit.utils.ControllerUtils;
+import com.mit.utils.JsonUtils;
+import com.mit.utils.SiteConstant;
+
+import io.swagger.annotations.ApiOperation;
+
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+	private Logger logger = org.slf4j.LoggerFactory.getLogger(OrderController.class);
+	
+	@Autowired
+	private OrderService orderService;
+	
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderOrderList(HttpServletRequest req,
+			@RequestParam(value = "page", required = false, defaultValue = "1") int page) {
+
+		ModelAndView mav = ControllerUtils.initPage("order_list", null, "");
+    	UserSession userSession = (UserSession) req.getAttribute("session");
+        Paging paging = new Paging();
+    	paging.setNumDisplay(SiteConstant.numDisplay);
+    	paging.setPageSize(SiteConstant.pageSize);
+        paging.setTotalRecord(orderService.countTotalOrder(userSession.getUserId(), true));
+        int totalPages = paging.getTotalPage();
+		paging.setCurrentPage(Paging.clamp(page, 1, totalPages));
+		
+		int from = (paging.getCurrentPage() - 1) * paging.getPageSize();
+		
+        Map<String, Object> orderMap = orderService.getOrderList(userSession.getUserId(), from, paging.getPageSize());
+        mav.addObject("orders", orderMap.get("orders"));
+        mav.addObject("paging", paging);
+        mav.addObject("params", ControllerUtils.buildParam(req, Arrays.asList("page")));
+        
+		return mav;
+	}
+	
+	@RequestMapping(value = "/detail", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderOrderDetail(HttpServletRequest req,
+			@RequestParam(value = "orderNumber") String orderNumber) {
+		
+		ModelAndView mav = ControllerUtils.initPage("order_detail", null, "");
+    	UserSession userSession = (UserSession) req.getAttribute("session");
+    	Map<String, Object> orderMap = orderService.getOrderDetail(userSession.getUserId(), orderNumber);
+        mav.addObject("order", orderMap.get("order"));
+        
+		return mav;
+	}
+	
+}

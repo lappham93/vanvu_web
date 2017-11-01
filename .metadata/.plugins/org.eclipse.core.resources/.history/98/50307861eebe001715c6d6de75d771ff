@@ -1,0 +1,391 @@
+package com.mit.controllers;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.address.entities.ShippingAddress;
+import com.mit.address.repositories.CountryRepo;
+import com.mit.address.repositories.ShippingAddressRepo;
+import com.mit.address.responses.BillingAddressResponse;
+import com.mit.address.responses.ShippingAddressResponse;
+import com.mit.cart.responses.CartResponse;
+import com.mit.cart.services.CartService;
+import com.mit.checkout.bodies.CheckoutConfirmBody;
+import com.mit.checkout.bodies.CheckoutPaymentBody;
+import com.mit.checkout.bodies.CheckoutShippingBody;
+import com.mit.checkout.responses.CheckoutPaymentResponse;
+import com.mit.checkout.responses.CheckoutResponse;
+import com.mit.checkout.responses.CheckoutShippingResponse;
+import com.mit.checkout.services.CheckoutService;
+import com.mit.define.ApiError;
+import com.mit.errcode.CheckoutErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.order.entities.Order;
+import com.mit.order.enums.ProductOrderStatus;
+import com.mit.order.responses.OrderResponse;
+import com.mit.order.responses.ShippingOptionResponse;
+import com.mit.payment.services.PaypalService;
+import com.mit.paypal.responses.CreatePaymentResponse;
+import com.mit.paypal.responses.ExecutePaymentResponse;
+import com.mit.promotion.entities.PromoCode;
+import com.mit.promotion.repositories.PromoCodeRepo;
+import com.mit.session.entities.UserSession;
+import com.mit.sessions.CheckoutSession;
+import com.mit.sessions.SiteSession;
+import com.mit.utils.ControllerUtils;
+import com.mit.utils.JsonUtils;
+import com.paypal.api.payments.Payment;
+
+import io.swagger.annotations.ApiOperation;
+
+@RestController
+@RequestMapping("/checkout")
+public class CheckoutController {
+	private Logger logger = org.slf4j.LoggerFactory.getLogger(CheckoutController.class);
+	@Autowired
+	private CheckoutService checkoutService;
+	@Autowired
+	private CartService cartService;
+	@Autowired
+	private PromoCodeRepo promoRepo;
+	@Autowired
+	private ShippingAddressRepo shippingAddressRepo;
+	@Autowired
+	private CountryRepo countryRepo;
+	@Autowired
+	private PaypalService paypalService;
+
+	@ApiOperation(value = "render checkout page")
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView renderCheckout(HttpServletRequest req) {
+		ModelAndView mav = ControllerUtils.initPage("checkout", null, "isCheckout");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		UserSession us = (UserSession) req.getAttribute("session");
+		CheckoutSession checkoutSession = SiteSession.getCheckout(req, true);
+		mav.addObject("countries", countryRepo.getList());
+
+		// Cart
+		Map<String, Object> rs = cartService.getCart(us.getUserId(), us.getProfileType());
+		CartResponse cartResponse = (CartResponse) rs.get("cart");
+		mav.addObject("cart", cartResponse);
+		if (cartResponse.getTotalQuantity() == 0) {
+			return mav;
+		}
+		// Precheck
+		Map<String, Object> checkoutMap = checkoutService.checkoutWeb(sessionKey, us.getUserId(), us.getProfileType(), checkoutSession.getShippingAddressId());
+		logger.info("checkout-pre: " + JsonUtils.Instance.toJson(checkoutMap));
+		CheckoutResponse checkoutResponse = (CheckoutResponse) checkoutMap.get("checkout");
+		mav.addObject("checkout", checkoutResponse);
+
+		// Shipping address
+		if (CollectionUtils.isEmpty(checkoutResponse.getShippingAddresses().getAddresses())) {
+			return mav;
+		}
+		ShippingAddressResponse defaultShippingAddress = (ShippingAddressResponse) checkoutMap.get("defaultShippingAddress");
+		mav.addObject("defaultSA", defaultShippingAddress);
+
+		// Shipping Option
+		if (CollectionUtils.isEmpty(checkoutResponse.getShippingOptions())) {
+			Map<String, Object> shippingOptionMap = checkoutService.getShippingOption(sessionKey, us.getUserId(),
+					defaultShippingAddress.getId());
+			int err = (int) shippingOptionMap.get("err");
+			if (err == CheckoutErrCode.SUCCESS) {
+				@SuppressWarnings("unchecked")
+				List<ShippingOptionResponse> shippingOptions = (List<ShippingOptionResponse>) shippingOptionMap
+						.get("shippingOptions");
+				checkoutResponse.setShippingOptions(shippingOptions);
+				mav.addObject("checkout", checkoutResponse);
+			}
+		}
+		if (CollectionUtils.isEmpty(checkoutResponse.getShippingOptions())) {
+			return mav;
+		}
+		ShippingOptionResponse defaultShippingOption = checkoutResponse.getShippingOptions().get(0);
+		mav.addObject("defaultSO", defaultShippingOption);
+
+		// Billing address, payment option
+		CheckoutShippingResponse checkoutShipping = checkoutService.getCheckoutShippingResponse(us.getUserId(), null);
+//		mav.addObject("checkoutShipping", checkoutShipping);
+		long defaultBillingAddressId = checkoutSession.getBillingAddressId();
+		if (defaultBillingAddressId == 0) {
+			defaultBillingAddressId = checkoutShipping.getBillingAddresses().getDefaultId();
+		}
+		BillingAddressResponse defaultBillingAddress = null;
+		if (!CollectionUtils.isEmpty(checkoutShipping.getBillingAddresses().getAddresses())) {
+			defaultBillingAddress = checkoutShipping.getBillingAddresses().getAddresses().get(0);
+			for (BillingAddressResponse ba : checkoutShipping.getBillingAddresses().getAddresses()) {
+				if (ba.getId() == defaultBillingAddressId) {
+					defaultBillingAddress = ba;
+					break;
+				}
+			}
+		}
+		mav.addObject("defaultBA", defaultBillingAddress);
+
+		// Payment
+		PromoCode promotionCode = null;
+		if (!StringUtils.isEmpty(checkoutSession.getPromoCode())) {
+			promotionCode = promoRepo.getByCode(checkoutSession.getPromoCode().toUpperCase());
+		}
+		ShippingAddress sa = shippingAddressRepo.getById(defaultShippingAddress.getId());
+		CheckoutPaymentResponse checkoutPayment = checkoutService.getCheckoutPaymentResponse(us.getUserId(), sessionKey,
+				promotionCode, checkoutSession.getPromoCode(), cartResponse, sa, defaultShippingOption.getId(), 0,
+				false, us.getProfileType());
+		mav.addObject("checkoutPayment", checkoutPayment);
+		
+		checkoutService.filterPaymentOption(checkoutPayment.getSubtotal(), checkoutShipping);
+		mav.addObject("checkoutShipping", checkoutShipping);
+		return mav;
+	}
+
+	@SuppressWarnings("unchecked")
+	@ApiOperation(value = "Get shipping option list", notes = "Error codes = {EMPTY_CART(-520), US_ONLY(-521), ADDRESS_NOT_EXIST(-325)}")
+	@RequestMapping(value = "/shippingOption", method = RequestMethod.GET)
+	public ApiResponse<List<ShippingOptionResponse>> getShippingOptionList(HttpServletRequest req,
+			@RequestParam(value = "shippingAddressId") long shippingAddressId) {
+		UserSession userSession = (UserSession) req.getAttribute("session");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		Map<String, Object> rs = checkoutService.getShippingOption(sessionKey, userSession.getUserId(),
+				shippingAddressId);
+		logger.info("shippingOption: " + JsonUtils.Instance.toJson(rs));
+		int err = (int) rs.get("err");
+		if (err == CheckoutErrCode.SUCCESS) {
+			return new ApiResponse<>((List<ShippingOptionResponse>) rs.get("shippingOptions"));
+		}
+		if (err == CheckoutErrCode.EMPTY_CART) {
+			return new ApiResponse<>(ApiError.EMPTY_CART);
+		}
+		if (err == CheckoutErrCode.SHIPPING_ADDRESS_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.ADDRESS_NOT_EXIST);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+
+	@ApiOperation(value = "Checkout", notes = "Error codes = {EMPTY_CART(-520), SOLD_OUT(-326)}")
+	@RequestMapping(value = "/preCheck", method = RequestMethod.GET)
+	public ApiResponse<CheckoutResponse> checkout(HttpServletRequest req) {
+		UserSession userSession = (UserSession) req.getAttribute("session");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		Map<String, Object> rs = checkoutService.checkout(sessionKey, userSession.getUserId(),
+				userSession.getProfileType());
+		logger.info("checkout-pre: " + JsonUtils.Instance.toJson(rs));
+		int err = (int) rs.get("err");
+		if (err == CheckoutErrCode.SUCCESS) {
+			return new ApiResponse<>((CheckoutResponse) rs.get("checkout"));
+		}
+		if (err == CheckoutErrCode.EMPTY_CART) {
+			return new ApiResponse<>(ApiError.EMPTY_CART);
+		}
+//		if (err == CheckoutErrCode.SOLD_OUT) {
+//			return new ApiResponse<>(ApiError.SOLD_OUT);
+//		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+
+	@ApiOperation(value = "Checkout shipping", notes = "Error codes = {INVALID_CHECKOUT_TOKEN(-522), SHIPPING_OPTION_NOT_EXIST(-523), ADDRESS_NOT_EXIST(-325)}")
+	@RequestMapping(value = "/shippingAddress", method = RequestMethod.POST)
+	public ApiResponse<CheckoutShippingResponse> checkoutShipping(HttpServletRequest req,
+			@RequestBody CheckoutShippingBody body) {
+		UserSession userSession = (UserSession) req.getAttribute("session");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		Map<String, Object> rs = checkoutService.checkoutShipping(body.getCheckoutToken(), sessionKey,
+				userSession.getUserId(), body.getShippingAddressId(), body.getShippingOptionId());
+		logger.info("checkoutshipping: " + JsonUtils.Instance.toJson(rs));
+		int err = (int) rs.get("err");
+		if (err == CheckoutErrCode.SUCCESS) {
+			return new ApiResponse<>((CheckoutShippingResponse) rs.get("checkoutShipping"));
+		}
+		if (err == CheckoutErrCode.INVALID_CHECKOUT_TOKEN) {
+			return new ApiResponse<>(ApiError.INVALID_CHECKOUT_TOKEN);
+		}
+		if (err == CheckoutErrCode.SHIPPING_ADDRESS_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.ADDRESS_NOT_EXIST);
+		}
+		if (err == CheckoutErrCode.SHIPPING_OPTION_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.SHIPPING_OPTION_NOT_EXIST);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+
+	@ApiOperation(value = "Checkout payment", notes = "Error codes = {INVALID_CHECKOUT_TOKEN(-522), SHIPPING_OPTION_NOT_EXIST(-523), INVALID_PAYMENT_OPTION(-524),INVALID_ROUTING_NUMBER(-525), INVALID_ACCOUNT_NUMBER(-526), INVALID_ACCOUNT_NAME(-527), INVALID_PROMO_CODE(-528), BILLING_ADDRESS_NOT_EXIST(-302), INVALID_CARD_NUMBER(-303), INVALID_CARD_CODE(-304), INVALID_EXPIRATION_DATE(-305), CANT_USE_POINT(-328), }")
+	@RequestMapping(value = "/payment", method = RequestMethod.POST)
+	public ApiResponse<CheckoutPaymentResponse> checkoutPayment(HttpServletRequest req,
+			@RequestBody CheckoutPaymentBody body) {
+		UserSession userSession = (UserSession) req.getAttribute("session");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		Map<String, Object> rs = checkoutService.checkoutPayment(body.getCheckoutToken(), sessionKey,
+				userSession.getUserId(), userSession.getProfileType(), body.getShippingAddressId(),
+				body.getShippingOptionId(), body.getBillingAddressId(), body.getPaymentOptionId(), body.getCardNumber(),
+				body.getCardCode(), body.getExpirationDate(), body.getRoutingNumber(), body.getAccountNumber(),
+				body.getAccountName(), body.isUsePoint(), body.getPromoCode());
+		logger.info("checkoutpayment: " + JsonUtils.Instance.toJson(rs));
+		int err = (int) rs.get("err");
+		if (err == CheckoutErrCode.SUCCESS) {
+			return new ApiResponse<>((CheckoutPaymentResponse) rs.get("checkoutPayment"));
+		}
+		if (err == CheckoutErrCode.INVALID_CHECKOUT_TOKEN) {
+			return new ApiResponse<>(ApiError.INVALID_CHECKOUT_TOKEN);
+		}
+		if (err == CheckoutErrCode.SHIPPING_ADDRESS_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.ADDRESS_NOT_EXIST);
+		}
+		if (err == CheckoutErrCode.SHIPPING_OPTION_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.SHIPPING_OPTION_NOT_EXIST);
+		}
+		if (err == CheckoutErrCode.BILLING_ADDRESS_NOT_EXIST) {
+			return new ApiResponse<>(ApiError.BILLING_ADDRESS_NOT_EXIST);
+		}
+		if (err == CheckoutErrCode.INVALID_PAYMENT_OPTION) {
+			return new ApiResponse<>(ApiError.INVALID_PAYMENT_OPTION);
+		}
+		if (err == CheckoutErrCode.INVALID_CARD_NUMBER) {
+			return new ApiResponse<>(ApiError.INVALID_CARD_NUMBER);
+		}
+		if (err == CheckoutErrCode.INVALID_CARD_CODE) {
+			return new ApiResponse<>(ApiError.INVALID_CARD_CODE);
+		}
+		if (err == CheckoutErrCode.INVALID_EXPIRATION_DATE) {
+			return new ApiResponse<>(ApiError.INVALID_EXPIRATION_DATE);
+		}
+		if (err == CheckoutErrCode.INVALID_ROUTING_NUMBER) {
+			return new ApiResponse<>(ApiError.INVALID_ROUTING_NUMBER);
+		}
+		if (err == CheckoutErrCode.INVALID_ACCOUNT_NUMBER) {
+			return new ApiResponse<>(ApiError.INVALID_ACCOUNT_NUMBER);
+		}
+		if (err == CheckoutErrCode.INVALID_ACCOUNT_NAME) {
+			return new ApiResponse<>(ApiError.INVALID_ACCOUNT_NAME);
+		}
+		if (err == CheckoutErrCode.INVALID_PROMO_CODE) {
+			return new ApiResponse<>(ApiError.INVALID_PROMO_CODE);
+		}
+		if (err == CheckoutErrCode.CANT_USE_POINT) {
+			return new ApiResponse<>(ApiError.CANT_USE_POINT);
+		}
+		if (err == CheckoutErrCode.PROMO_CANNOT_APPLIED) {
+			return new ApiResponse<>(ApiError.CANT_USE_PROMO);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+
+	@ApiOperation(value = "Checkout confirmation", notes = "Error codes = {INVALID_CHECKOUT_TOKEN(-522), SHIPPING_OPTION_NOT_EXIST(-523), INVALID_PAYMENT_OPTION(-524),INVALID_ROUTING_NUMBER(-525), INVALID_ACCOUNT_NUMBER(-526), INVALID_ACCOUNT_NAME(-527), INVALID_PROMO_CODE(-528), BILLING_ADDRESS_NOT_EXIST(-302), INVALID_CARD_NUMBER(-303), INVALID_CARD_CODE(-304), INVALID_EXPIRATION_DATE(-305),PAYMENT_ERROR(-317), SOLD_OUT(-326), CANT_USE_POINT(-328)}")
+	@RequestMapping(value = "/confirm", method = RequestMethod.POST)
+	public ApiResponse<OrderResponse> checkoutConfirm(HttpServletRequest req, @RequestBody CheckoutConfirmBody body) {
+		UserSession userSession = (UserSession) req.getAttribute("session");
+		String sessionKey = String.valueOf(req.getAttribute("sessionKey"));
+		try {
+			Map<String, Object> rs = checkoutService.checkoutConfirmation(body.getCheckoutToken(), sessionKey,
+					userSession.getUserId(), userSession.getProfileType(), body.getShippingAddressId(),
+					body.getShippingOptionId(), body.getBillingAddressId(), body.getPaymentOptionId(),
+					body.getCardNumber(), body.getCardCode(), body.getExpirationDate(), body.getRoutingNumber(),
+					body.getAccountNumber(), body.getAccountName(), body.isUsePoint(), body.getPromoCode());
+			logger.info("checkout-confirm: " + JsonUtils.Instance.toJson(rs));
+			int err = (int) rs.get("err");
+			if (err == CheckoutErrCode.SUCCESS) {
+				return new ApiResponse<>((OrderResponse) rs.get("order"));
+			}
+			if (err == CheckoutErrCode.INVALID_CHECKOUT_TOKEN) {
+				return new ApiResponse<>(ApiError.INVALID_CHECKOUT_TOKEN);
+			}
+			if (err == CheckoutErrCode.SHIPPING_ADDRESS_NOT_EXIST) {
+				return new ApiResponse<>(ApiError.ADDRESS_NOT_EXIST);
+			}
+			if (err == CheckoutErrCode.SHIPPING_OPTION_NOT_EXIST) {
+				return new ApiResponse<>(ApiError.SHIPPING_OPTION_NOT_EXIST);
+			}
+			if (err == CheckoutErrCode.BILLING_ADDRESS_NOT_EXIST) {
+				return new ApiResponse<>(ApiError.BILLING_ADDRESS_NOT_EXIST);
+			}
+			if (err == CheckoutErrCode.INVALID_PAYMENT_OPTION) {
+				return new ApiResponse<>(ApiError.INVALID_PAYMENT_OPTION);
+			}
+			if (err == CheckoutErrCode.INVALID_CARD_NUMBER) {
+				return new ApiResponse<>(ApiError.INVALID_CARD_NUMBER);
+			}
+			if (err == CheckoutErrCode.INVALID_CARD_CODE) {
+				return new ApiResponse<>(ApiError.INVALID_CARD_CODE);
+			}
+			if (err == CheckoutErrCode.INVALID_EXPIRATION_DATE) {
+				return new ApiResponse<>(ApiError.INVALID_EXPIRATION_DATE);
+			}
+			if (err == CheckoutErrCode.INVALID_ROUTING_NUMBER) {
+				return new ApiResponse<>(ApiError.INVALID_ROUTING_NUMBER);
+			}
+			if (err == CheckoutErrCode.INVALID_ACCOUNT_NUMBER) {
+				return new ApiResponse<>(ApiError.INVALID_ACCOUNT_NUMBER);
+			}
+			if (err == CheckoutErrCode.INVALID_ACCOUNT_NAME) {
+				return new ApiResponse<>(ApiError.INVALID_ACCOUNT_NAME);
+			}
+			if (err == CheckoutErrCode.INVALID_PROMO_CODE) {
+				return new ApiResponse<>(ApiError.INVALID_PROMO_CODE);
+			}
+			if (err == CheckoutErrCode.PAYMENT_DECLINED) {
+				return new ApiResponse<>(ApiError.PAYMENT_ERROR);
+			}
+			if (err == CheckoutErrCode.PAYMENT_ERROR) {
+				return new ApiResponse<>(ApiError.PAYMENT_ERROR);
+			}
+			if (err == CheckoutErrCode.SOLD_OUT) {
+				return new ApiResponse<>(ApiError.SOLD_OUT);
+			}
+			if (err == CheckoutErrCode.COD_ONLY) {
+				return new ApiResponse<>(ApiError.INVALID_PAYMENT_OPTION);
+			}
+			if (err == CheckoutErrCode.CANT_USE_POINT) {
+				return new ApiResponse<>(ApiError.CANT_USE_POINT);
+			}
+			if (err == CheckoutErrCode.PROMO_CANNOT_APPLIED) {
+				return new ApiResponse<>(ApiError.CANT_USE_PROMO);
+			}
+		} catch (Exception e) {
+			logger.info("Exception : " + e.getMessage());
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+	
+	@ApiOperation(value = "Paypal create payment")
+	@RequestMapping(value = "/paypal/create-payment", method = RequestMethod.POST)
+	public CreatePaymentResponse createPaypalPayment(HttpServletRequest req) {
+		long orderId = NumberUtils.toLong(req.getParameter("orderId"));
+		Payment payment = paypalService.createPayment(orderId);
+		CreatePaymentResponse paymentResp = new CreatePaymentResponse();
+		paymentResp.setPaymentId(payment != null ? payment.getId() : "");
+		return paymentResp;
+	}
+	
+	@ApiOperation(value = "Paypal exe payment")
+	@RequestMapping(value = "/paypal/execute-payment", method = RequestMethod.POST)
+	public ApiResponse<ExecutePaymentResponse> exePaypalPayment(HttpServletRequest req) {
+		String paymentId = req.getParameter("paymentID");
+		String payerId = req.getParameter("payerID");
+		long orderId = NumberUtils.toLong(req.getParameter("orderId"));
+		Map<String, Object> exeRs = paypalService.executePayment(paymentId, payerId, orderId);
+		Payment payment = (Payment) exeRs.get("payment");
+		int orderStatus = (int) exeRs.get("orderStatus");
+		ExecutePaymentResponse paymentResp = new ExecutePaymentResponse();
+		if (orderStatus != ProductOrderStatus.DELETED.getValue()) {
+			Order order = (Order) exeRs.get("order");
+			paymentResp.setOrderId(orderId);
+			paymentResp.setOrderNumber(order.getOrderNumber());
+			paymentResp.setState(payment.getState());
+			return new ApiResponse<ExecutePaymentResponse>(paymentResp);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+	
+}

@@ -1,0 +1,27 @@
+$(function() {
+	$('#contactFrmId').submit(function() {
+		var name = $('#nameIptId').val();
+		var email = $('#emailIptId').val();
+		if (email && !App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+		var phone = $('#phoneIptId').val();
+		var msg = $('#msgIptId').val();
+		var data = {'name': name, 'message': msg, 'email': email, 'phone': phone};
+		var url = App.getFullUri(App.uris.contact);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [];
+			if (resp.code >= 0) {
+				$('#nameIptId').val('');
+				$('#emailIptId').val('');
+				$('#phoneIptId').val('');
+				$('#msgIptId').val('');
+			}
+			var msgError = "Can not send feedback at this time.";
+			App.callbackAjaxRequest(resp, errors, "", "Thanks for your feedback!", msgError);
+		});
+		
+		return false;
+	});
+});

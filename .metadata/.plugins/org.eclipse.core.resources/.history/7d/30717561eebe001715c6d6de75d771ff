@@ -1,0 +1,132 @@
+package com.mit.controllers;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.app.enums.AppType;
+import com.mit.define.ApiError;
+import com.mit.errcode.UserErrCode;
+import com.mit.http.ApiResponse;
+import com.mit.http.exception.TokenInvalidException;
+import com.mit.sessions.SiteSession;
+import com.mit.user.bodies.EmailLogin;
+import com.mit.user.bodies.ForgotPasswordBody;
+import com.mit.user.bodies.RefreshTokenBody;
+import com.mit.user.bodies.SocialSignin;
+import com.mit.user.responses.LoginToken;
+import com.mit.user.services.LoginService;
+import com.mit.utils.ControllerUtils;
+
+import io.swagger.annotations.ApiOperation;
+
+@Controller
+@RestController
+@RequestMapping(value = "login")
+public class LoginController {
+	Logger logger = LoggerFactory.getLogger(LoginController.class);
+	@Autowired
+	private LoginService loginService;
+	
+	@RequestMapping(value = "", method = RequestMethod.GET) 
+	public ModelAndView renderLogin(HttpServletRequest request) {
+		ModelAndView mav = ControllerUtils.initPage("login", null, "");
+		return mav;
+	}
+	
+	@ApiOperation(value = "Social login", notes = "Redirect to register if profile is null. Error codes: BAN(-107)")
+    @RequestMapping(value = "/social", method = RequestMethod.POST)
+    @ResponseBody
+	public ApiResponse<LoginToken> socialLogin(HttpServletRequest request, @RequestBody SocialSignin body) throws Exception {
+        String token = body.getToken();
+        int type = body.getType();
+
+        try {
+            LoginToken loginToken = loginService.socialLogin(token, type, AppType.CLIENT.getValue());
+            if (loginToken == null) {
+                return new ApiResponse<>(-1, "Unknown error.");
+            }
+            if (StringUtils.isEmpty(loginToken.getToken()) && StringUtils.isEmpty(loginToken.getRefreshToken())) {
+                return new ApiResponse<>(ApiError.BAN);
+            }
+            if (!StringUtils.isEmpty(loginToken.getSessionKey())) {
+            	SiteSession.setSession(request, loginToken.getSessionKey(), loginToken.getRefreshToken());
+            }
+            return new ApiResponse<>(loginToken);
+        } catch (TokenInvalidException tokenInvalidException) {
+            return new ApiResponse<>(ApiError.INVALID_TOKEN);
+        }
+    }
+
+    @ApiOperation(value = "Refresh token", notes="REFRESHTOKEN_TIMEOUT(-106), BAN(-107)")
+    @RequestMapping(value = "/token", method = RequestMethod.POST)
+    @ResponseBody
+    public ApiResponse<LoginToken> refreshToken(HttpServletRequest request, @RequestBody RefreshTokenBody body) throws Exception {
+        LoginToken loginToken = loginService.refreshToken(body.getRefreshToken(), AppType.CLIENT.getValue());
+        if (loginToken == null) {
+        	return new ApiResponse<>(ApiError.REFRESHTOKEN_TIMEOUT);
+        }
+        if (StringUtils.isEmpty(loginToken.getToken()) && StringUtils.isEmpty(loginToken.getRefreshToken())) {
+        	return new ApiResponse<>(ApiError.BAN);
+        }
+        return new ApiResponse<>(loginToken);
+    }
+    
+    @ApiOperation(value = "Email login", notes = "Redirect to register if profile is null. Error codes: BAN(-107)")
+    @RequestMapping(value = "/email", method = RequestMethod.POST)
+    @ResponseBody
+	public ApiResponse<LoginToken> emailLogin(HttpServletRequest request, @RequestBody EmailLogin body) {
+    	try {
+			Map<String, Object> loginMap = loginService.emailLogin(body);
+			int err = (int) loginMap.get("err");
+			if (err == UserErrCode.SUCCESS) {
+				LoginToken loginToken = (LoginToken) loginMap.get("loginToken");
+				SiteSession.setSession(request, loginToken.getSessionKey(), loginToken.getRefreshToken());
+				return new ApiResponse<>(loginToken);
+			}
+			if (err == UserErrCode.ERR_USERNAME || err == UserErrCode.ERR_PASSWORD) {
+				return new ApiResponse<>(ApiError.PARAMS_INVALID);
+			}
+		} catch (Exception e) {
+			logger.info("Exception: ", e);
+		}
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+    }
+    
+    @RequestMapping(value = "/password/forgot", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderForgotPassword(HttpServletRequest req) {
+		ModelAndView mav = ControllerUtils.initPage("forgot_password", null, "");
+		return mav;
+	}
+	
+	@ApiOperation(value = "forgot password", notes = "UNABLE_CHANGE_NAME(-315), INVALID_MEMBERSHIP_CODE(-327)")
+	@RequestMapping(value = "/password/forgot", method = RequestMethod.POST)
+	public ApiResponse<Object> forgotPassword(HttpServletRequest request, @RequestBody ForgotPasswordBody body) {
+		try {
+			int err = loginService.resetPassword(AppType.CLIENT.getValue(), body);
+			if (err == UserErrCode.SUCCESS) {
+				return new ApiResponse<>(ApiError.SUCCESS);
+			}
+			if (err == UserErrCode.ERR_USERNAME) {
+				return new ApiResponse<>(ApiError.PARAMS_INVALID);
+			}
+		} catch (Exception e) {
+		}
+		
+		return new ApiResponse<>(ApiError.SERVER_ERROR);
+	}
+}

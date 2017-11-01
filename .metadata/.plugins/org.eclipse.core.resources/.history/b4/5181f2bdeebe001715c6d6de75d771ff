@@ -1,0 +1,62 @@
+$(function(){
+	$('#registrationFrmId').submit(function(e){
+		var email = $('#emailIptId').val();
+		if (!App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+		var password = $('#passwordIptId').val();
+		var passwordConfirm = $('#passwordConfirmIptId').val();
+		var firstName = $('#firstNameIptId').val();
+		var lastName = $('#lastNameIptId').val();
+		var phoneCode = $('#phoneCodeSltId').val();
+		var phone = $('#phoneIptId').val();
+		phone = phone.replace('-', '');
+		var countryCode = $('#countrySltId').val();
+    	var country = $('#countrySltId option[value="' + countryCode + '"]').text();
+		var data = {
+				'email': email, 
+				'password': password,
+				'passwordConfirm': passwordConfirm,
+				'firstName': firstName, 
+				'lastName': lastName, 
+				'phone': phone, 
+				'countryCode': phoneCode, 
+				"address": {
+				    "country": country,
+				    "countryCode": countryCode,
+				}
+		};
+		var url = App.getFullUri(App.uris.registerEmail);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.PARAMS_INVALID, App.errors.MISSING_PARAM, App.errors.USERNAME_EXIST];
+			App.callbackAjaxRequest(resp, errors, App.uris.home);
+		});
+		
+		return false;
+	});
+});
+
+function checkLengthPassword() {
+    var password = $("#passwordIptId").val();
+    if (password.length < 6){
+        $("#error_length").show();
+    } else {
+        $("#error_length").hide();
+        if ($("#passwordConfirmIptId").val()) {
+        	checkPasswordMatch();
+        }
+    }
+    return false;
+};
+
+function checkPasswordMatch() {
+    var password = $("#passwordIptId").val();
+    var confirmPassword = $("#passwordConfirmIptId").val();
+    if (password != confirmPassword){
+        $("#error_match").show();
+    } else {
+        $("#error_match").hide();
+    }
+    return false;
+};

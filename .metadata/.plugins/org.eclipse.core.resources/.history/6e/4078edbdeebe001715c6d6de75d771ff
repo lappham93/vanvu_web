@@ -1,0 +1,70 @@
+var ACCOUNT_KIT_TYPE = 1;
+var callback = null;
+
+function accountKitLoginCallback(response) {
+	if (response.status === "PARTIALLY_AUTHENTICATED") {
+		var token = response.code;
+		if (callback) {
+			callback.func(callback.data, token, App.loginType.ACCOUNT_KIT);
+		}
+		// Send code to server to exchange for access token
+	} else if (response.status === "NOT_AUTHENTICATED") {
+		// handle authentication failure
+		App.showMessage("Authentication failure!");
+		App.hideLoader();
+	} else if (response.status === "BAD_PARAMS") {
+		// handle bad parameters
+		App.showMessage(App.errMsg.SERVER_ERR);
+		App.hideLoader();
+	}
+}
+
+
+function accountKitSMSLogin(phone, callbackFunc, callbackData) {
+	callback = {'func': callbackFunc, 'data': callbackData};
+	AccountKit.login(
+		'PHONE',
+		{phoneNumber: phone},// will use default values if not specified
+		accountKitLoginCallback
+	);
+	return false;
+}
+
+var test = true;
+var tokenTest = "AQBAwQsG7Iy2j7hozMkz0z97l09yAsPABEzePWy01iLRZoevCGpzacgMtKP9ZmTmEWmK7cJ6uOdag3KBpwYV-G8jVXsVbgy58PYvzLdYc4MuoFWZmXdnSUBU7Zbmljsiom9ulofWgU00zJPlzgR5Nz8NjzuQ70AU8oVT6N6aZzW1hBE4ISQmRA8Qr6CoCgr7hk8PUUXAQIEJyKjgMJV2b9u2STwvGCC0HXrPCdY9r6A4kumb-9LiXBianxLBe6sLo_J2pTqU13akmSyuE3vrUmRx";
+function loginACInit() {
+	if (test) {
+		loginFunc(null, tokenTest, App.loginType.ACCOUNT_KIT);
+	} else {
+		accountKitSMSLogin("", loginFunc, "");
+	}
+}
+//token = AQA08fy25r9G7LqdQOzGSHkCEKimrvV6liY1V7JVINYKMO6gWY0S2R5YwsCFMKWaD_OkDWGpRW0jav6glmxvneJ8O6Q6Dqg05jceul0kQ-lB9p7nSXS5F5evdHqktFuPZKcZLuJlFqy2BuPWWFhORIASMhX3KK4U2rN4RqMF1sb3o04fn23v9Kduxq97oecmJGLykUI4t7XauLJ9vtssHo7voccDHkEWSFHBvQPzZ71a2oHSPjNIuyinki8TFzlhieZ1Qx7pF-CTi668BiIbpmk1
+function loginFunc(data, token, type) {
+	var data = {'token': token, 'type': type}
+	var url = App.getFullUri(App.uris.loginSocial);
+	App.ajaxRequest('POST', url, data, function(resp){
+		loginCallback(resp);
+	})
+}
+
+function loginCallback(resp) {
+	if (resp.code >= 0) {
+		if (resp.data.profile != null) {
+			App.redirect(App.uris.home);
+		} else {
+			App.redirect(App.uris.register + "?token=" + resp.data.token + "&type=" + resp.data.socialProfile.type);
+		}
+	} else {
+		var msg = "";
+		if (resp.code == App.errors.INVALID_TOKEN.value) {
+			msg = "Invalid token";
+		} else if (resp.code == App.errors.BAN.value) {
+			msg = "Your account has been blocked. Please contact to admin for detail!";
+		} else {
+			msg = "Server error";
+		}
+		$.notify('danger', msg);
+		console.log('code = ' + resp.code);
+	}
+}

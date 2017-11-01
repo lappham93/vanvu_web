@@ -1,0 +1,30 @@
+package com.mit.sessions;
+
+import com.mit.session.entities.UserSession;
+
+public class SiteProfile extends UserSession {
+	private long userId;
+	private int step;
+
+	public SiteProfile(long userId, int step) {
+		this.userId = userId;
+		this.step = step;
+	}
+	
+	public long getUserId() {
+		return userId;
+	}
+
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
+
+	public int getStep() {
+		return step;
+	}
+
+	public void setStep(int step) {
+		this.step = step;
+	}
+
+}

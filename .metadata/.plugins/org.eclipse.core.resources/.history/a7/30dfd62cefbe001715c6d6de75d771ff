@@ -1,0 +1,43 @@
+package com.mit.controllers;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ModelAttribute;
+
+@ControllerAdvice
+public final class GlobalController {
+	@Value("${site.prefix}")
+	private String adminPrefix;
+	@Value("${site.title}")
+	private String adminTitle;
+	@Value("${site.resources.path}")
+	private String resourcesPath;
+	
+	@ModelAttribute
+	public void addAttributes(Model model, HttpServletRequest req) {
+		try {
+			UserSession userSession = (UserSession)AdminSession.getUserSession(req);
+			AdminProfile adminProfile = 	profileRepo.getById(userSession.getUserId());
+			if (adminProfile != null) {
+				model.addAttribute("admin_name", AdminUtils.buildProfileName(adminProfile));
+				model.addAttribute("admin_type", adminProfile.getAdminType());
+				model.addAttribute("admin_role", Privilege.getPrivilege().get(adminProfile.getAdminType()).getRole());
+			}
+		} catch (Exception e){}
+		
+		model.addAttribute("admin_prefix", adminPrefix);
+		model.addAttribute("admin_title", adminTitle);
+		
+		model.addAttribute("resources_path", resourcesPath);
+		model.addAttribute("facebook_appId", facebookAppId);
+		model.addAttribute("accountKit_api_version", apiVersion);
+		model.addAttribute("app_secret", apiVersion);
+		
+		model.addAttribute("system_admin_type", AdminType.SYSTEM_ADMIN.getValue());
+		model.addAttribute("region_manager_type", AdminType.REGION_MANAGER.getValue());
+	}
+}

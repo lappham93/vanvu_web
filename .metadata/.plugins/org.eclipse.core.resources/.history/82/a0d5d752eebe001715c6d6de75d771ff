@@ -1,0 +1,88 @@
+package com.mit.sessions;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang.BooleanUtils;
+
+import com.mit.session.entities.UserSession;
+
+public class SiteSession {
+	private static final int expireTimeInSec = 7 * 60 * 60;
+	private static final String sessionKeyKey = "sessionKey";
+	private static final String refreshTokenKey = "refreshToken";
+	private static final String sessionKeyAttrKey = "sessionKey";
+	private static final String sessionAttrKey = "session";
+	private static final String profileAttrKey = "profile";
+	private static final String registeredKey = "registered";
+	private static final String checkoutKey = "checkout";
+	
+	public static void setCheckout(HttpServletRequest req, CheckoutSession checkoutSession) {
+		req.getSession().setAttribute(checkoutKey, checkoutSession);
+	}
+	
+	public static CheckoutSession getCheckout(HttpServletRequest req, boolean createIfNull) {
+		CheckoutSession checkoutSession = null;
+		try {
+			checkoutSession = (CheckoutSession) req.getSession().getAttribute(checkoutKey);
+		} catch(Exception e) {
+		}
+		if (createIfNull && checkoutSession == null) {
+			checkoutSession = new CheckoutSession();
+		}
+		return checkoutSession;
+	}
+	
+	public static void setRegistered(HttpServletRequest req, boolean registered) {
+		req.getSession().setAttribute(registeredKey, registered);
+	}
+	
+	public static boolean getRegistered(HttpServletRequest req) {
+		return BooleanUtils.toBoolean(String.valueOf(req.getSession().getAttribute(registeredKey)));
+	}
+	
+	public static void removeRegistered(HttpServletRequest req) {
+		req.getSession().removeAttribute(registeredKey);
+	}
+	
+	public static void setSession(HttpServletRequest req, String sessionKey, String refreshToken) {
+		req.getSession().setAttribute(sessionKeyKey, sessionKey);
+		req.getSession().setAttribute(refreshTokenKey, refreshToken);
+		req.getSession().setMaxInactiveInterval(expireTimeInSec);
+	}
+	
+	public static void removeSession(HttpServletRequest req) {
+		req.getSession().removeAttribute(sessionKeyKey);
+		req.getSession().removeAttribute(refreshTokenKey);
+	}
+	
+	public static String getSessionKey(HttpServletRequest req) {
+		if (req.getSession().getAttribute(sessionKeyKey) != null) {
+			return String.valueOf(req.getSession().getAttribute(sessionKeyKey));
+		}
+		return "";
+	}
+	
+	public static String getRefreshToken(HttpServletRequest req) {
+		if (req.getSession().getAttribute(refreshTokenKey) != null) {
+			return String.valueOf(req.getSession().getAttribute(refreshTokenKey));
+		}
+		return "";
+	}
+	
+	public static void setAttribute(HttpServletRequest req, String sessionKey, Object session) {
+		req.setAttribute(sessionKeyAttrKey, sessionKey);
+		req.setAttribute(sessionAttrKey, session);
+	}
+	
+	public static UserSession getUserSession(HttpServletRequest req) {
+		return (UserSession) req.getAttribute(sessionAttrKey);
+	}
+	
+	public static void setProfile(HttpServletRequest req, SiteProfile profile) {
+		req.setAttribute(profileAttrKey, profile);
+	}
+	
+	public static SiteProfile getProfile(HttpServletRequest req) {
+		return (SiteProfile) req.getAttribute(profileAttrKey);
+	}
+}

@@ -1,0 +1,22 @@
+$(function(){
+	$('#loginFormId').submit(function(e){
+		var email = $('#emailIptId').val();
+		if (!App.validateEmail(email)) {
+			$.notify('danger', "Email is invalid format.");
+			return false;
+		}
+		var password = $('#passwordIptId').val();
+		var data = {
+				'email': email, 
+				'password': password
+		};
+		var url = App.getFullUri(App.uris.loginEmail);
+		App.ajaxRequest('POST', url, data, function(resp) {
+			var errors = [App.errors.PARAMS_INVALID];
+			var msgErr = "Email or password is invalid.";
+			App.callbackAjaxRequest(resp, errors, App.uris.home, "", msgErr);
+		});
+		
+		return false;
+	});
+});

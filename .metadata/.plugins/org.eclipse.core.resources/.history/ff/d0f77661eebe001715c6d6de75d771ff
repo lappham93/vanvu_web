@@ -1,0 +1,68 @@
+package com.mit.controllers;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.common.Paging;
+import com.mit.errcode.ProductErrCode;
+import com.mit.product.enums.SkuSortOption;
+import com.mit.product.services.ProductService;
+import com.mit.session.entities.UserSession;
+import com.mit.user.enums.ProfileType;
+import com.mit.utils.ControllerUtils;
+import com.mit.utils.MIdNoise;
+import com.mit.utils.SiteConstant;
+
+@Controller
+@RequestMapping(value = "index")
+public class HomeController {
+	
+	@Autowired
+	private ProductService productService;
+	
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView render(HttpServletRequest req,
+			@RequestParam(value = "page", required = false, defaultValue = "1") int page,
+			@RequestParam(value = "category", required = false, defaultValue = "") String categoryIds,
+			@RequestParam(value = "brand", required = false, defaultValue = "") String brandIds,
+			@RequestParam(value = "q", required = false, defaultValue = "") String q) {
+		ModelAndView mav = ControllerUtils.initPage("home", null, "isHome");
+        
+		long userId = 0;
+		int profileType = ProfileType.CLIENT.getValue();
+        if (req.getAttribute("session") != null) {
+        	UserSession userSession = (UserSession) req.getAttribute("session");
+            userId = userSession.getUserId();
+            profileType = userSession.getProfileType();
+        }
+        int categoryId = MIdNoise.deNoiseIId(categoryIds, 0);
+        long brandId = MIdNoise.deNoiseLId(brandIds, 0L);
+        //Paging.
+        Paging paging = new Paging();
+    	paging.setNumDisplay(SiteConstant.numDisplay);
+    	paging.setPageSize(SiteConstant.pageSize);
+        paging.setTotalRecord(productService.countSku(0, categoryId, brandId, null, q, true));
+        int totalPages = paging.getTotalPage();
+		paging.setCurrentPage(Paging.clamp(page, 1, totalPages));
+        
+        //render 100 feature product.
+        Map<String, Object> rs = productService.getListSku(userId, profileType, 0, categoryId, brandId, null, q, true, paging.getCurrentPage(), paging.getPageSize(), "", SkuSortOption.DEFAULT);// ProductModel.Instance.getListSKU(userId, typeId, 0, "", true, offset, paging.pageSize, "");
+        int err = (int) rs.get("err");
+        if (err == ProductErrCode.SUCCESS) {
+        	mav.addObject("skus", rs.get("skus"));
+        }
+        mav.addObject("paging", paging);
+        
+		return mav;
+	}
+}

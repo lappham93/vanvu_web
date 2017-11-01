@@ -1,0 +1,403 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout_header">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/layout.js'"></script>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/cart.js'"></script>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/wishlist.js'"></script>
+</head>
+
+<body>
+	<div layout:fragment="body_content" th:with="categoryGroupOption=1, brandGroupOption=2, emailWeb='vietnails.shop@gmail.com', phoneWeb='+1 206 605 5293', phoneWebVi='+1 719 484 9449', itemSkuType=1, comboSkuType=2, accountKitLogin=1, facebookLogin=2, googleLogin=3, emailLogin=4" th:remove="tag">
+		<div class="wrapper-area">
+            <!-- Add your site or application content here -->
+            <div class="alert-fixed-top"></div>
+	        <!-- Header Area Start Here -->
+	        <header>
+				<div class="header-area-style3" id="sticker">
+					<div class="header-top">
+						<div class="header-top-inner-top">
+							<div class="container">
+								<div class="row">
+									<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">
+										<div class="header-contact">
+											<ul>
+												<li><i class="fa fa-phone" aria-hidden="true"></i><a th:href="${'tel:' + phoneWeb}" th:text="${phoneWeb + ' - En'}"> +‎84 1654 543 286</a></li>
+												<li><i class="fa fa-phone" aria-hidden="true"></i><a th:href="${'tel:' + phoneWebVi}" th:text="${phoneWebVi + ' - Vi'}"> +‎84 1654 543 286</a></li>
+												<li><i class="fa fa-envelope" aria-hidden="true"></i><a th:href="${'mailto:' + emailWeb}" th:text="${emailWeb}"> lappham93@gmail.com</a></li>
+											</ul>
+										</div>
+									</div>
+									<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+										<div class="account-wishlist">
+                                            <ul>
+												<li th:if="${profile.logged == false}"><a th:href="@{${site_prefix} + '/login'}"><i class="fa fa-lock" aria-hidden="true"></i> Login</a></li>
+												<li th:if="${profile.logged == false}"><a th:href="@{${site_prefix} + '/register'}"><i class="fa fa-heart-o" aria-hidden="true"></i> Register</a></li>
+                                                <li th:if="${profile.logged}"><a href="#" class="dropdown dropdown-toggle" data-toggle="dropdown" aria-expanded="false" th:text="${profile.firstName + ' ' + profile.lastName}"> <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+                                                    <ul class="dropdown-menu dropdown-menu-right pull-right" style="width: 200px; color: black;">
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/profile'}" style="font-size: 14px; color: black;">My Account</a></li>
+                                                        <li th:if="${profile.profileType == emailLogin}" style="display: block;"><a th:href="@{${site_prefix} + '/profile/password'}" style="font-size: 14px; color: black;">Change password</a></li>
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/address/billingAddress'}" style="font-size: 14px; color: black;">Billing Address</a></li>
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/address/shippingAddress'}" style="font-size: 14px; color: black;">Shipping Address</a></li>
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/wishlist'}" style="font-size: 14px; color: black;">Wish List</a></li>
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/order'}" style="font-size: 14px; color: black;">Order History</a></li>
+                                                        <li style="display: block;"><a th:href="@{${site_prefix} + '/logout'}" style="font-size: 14px; color: black;">Logout</a></li>
+                                                    </ul>
+                                                </li>
+											</ul>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="header-top-inner-bottom">
+							<div class="container">
+								<div class="row">
+									<div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
+										<div class="logo-area" style="margin-top:-3px">
+                                            <a th:href="@{${site_prefix} + '/index'}"><img class="img-responsive" th:src="${resources_path} + '/mitlib/img/icon/logo-03.png'" alt="logo" height="48" style="height: 48px;" /></a>
+										</div>
+									</div>
+									<div class="col-lg-7 col-md-7 col-sm-7 col-xs-12">
+                                        <form id="searchFrmId">
+											<div class="search-area">
+									            <div class="input-group" id="adv-search">
+	                                                <input id="qIptId" type="text" class="form-control" placeholder="Search Product" th:value="${q}"/>
+	                                                <div class="input-group-btn">
+	                                                    <div class="btn-group" role="group">
+	                                                        <div class="dropdown dropdown-lg">
+	                                                            <button type="button" class="btn btn-metro dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+	                                                                <span th:text="${categorySelectName}"></span><i class="fa fa-caret-up" aria-hidden="true"></i><i class="fa fa-caret-down" aria-hidden="true"></i>
+	                                                            </button>
+	                                                            <div class="dropdown-menu dropdown-menu-right" role="menu">
+	                                                                <ul class="sidenav-nav" >
+	                                                                    <li><a href="#" data-cateid="0" class="searchcate" style="font-size: 14px;"><i class="fa fa-circle-o searchcate"></i>All Categories</a></li>
+	                                                                    <li th:each="cate: ${cates}"><a href="#" th:attr="data-cateid=${cate.id}" class="searchcate" style="font-size: 14px;"><i class="fa fa-circle-o searchcate" style="margin-bottom: -3px;"></i><span th:text="${cate.name}" th:remove="tag"></span></a></li>
+	                                                                </ul>
+	                                                            </div>
+	                                                        </div>
+	                                                        <button id="searchBtnId" name="searchpro" type="button" class="btn btn-metro-search"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+	                                                    </div>
+	                                                </div>
+									            </div>
+											</div>
+                                            <input type="hidden" id="cateSelectIptId" th:value="${categorySelectId != null ? categorySelectId : ''}" /> <!-- {SEARCH_CATEID} -->
+                                        </form>
+									</div>
+									<div class="col-lg-2 col-md-2 col-sm-2 col-xs-12">
+										<ul class="header-cart-area">
+											<li>
+												<div class="cart-area">
+                                                    <a id="miniCartId" class="" data-loading-url="http://vsquarestore.com/static/mitlib/img/preloader.gif" ><i class="fa fa-shopping-cart" aria-hidden="true"></i><span class="cartItemCount number" th:text="${profile.cartSize}"></span></a>
+                                                    
+                                                    <ul id="miniCartDivId" style="display:none">
+                                                    
+                                                    </ul>
+												</div>
+											</li>
+											<li>
+												<div class="additional-menu-area" id="additional-menu-area">
+													<div id="mySidenav" class="sidenav">
+														<a href="#" class="closebtn">×</a>
+                                                        <!-- <form id="frmsearch2" method="get" th:action="@{${site_prefix} + '/search'}">
+															<div class="sidenav-search">
+																<div class="input-group stylish-input-group">
+	                                                                <input id="keysearch2" name="keysearch" type="text" placeholder="Search Here . . ." class="form-control" style="text-transform: none;" th:value="${q}" />
+												                    <span class="input-group-addon">
+												                        <button id="searchpro2" type="submit">
+												                            <span class="glyphicon glyphicon-search"></span>
+												                        </button>
+												                    </span>
+												                </div>
+															</div>
+                                                            <input type="hidden" id="cateid2" name="cateid" value="0" />
+                                                        </form> -->
+                                                        <!-- <ul class="sidenav-login-registration"></ul> -->
+                                                        <h3 class="ctg-name-title" style="margin-top: 25px;">Brands</h3>
+														<ul class="sidenav-nav">
+                                                            <li th:each="cate:${cates}">
+                                                                <a th:href="@{${site_prefix} +'/product/group/' + ${cate.id} (groupOption=${categoryGroupOption})}"><i class="fa fa-circle-o" style="margin-bottom: -3px"></i><span th:text="${cate.name}"></span></a>
+                                                            </li>
+														</ul>
+													</div>
+													<span class="side-menu-open side-menu-trigger"><i class="fa fa-bars" aria-hidden="true"></i></span>
+												</div>
+											</li>
+										</ul>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="header-bottom">
+						<div class="container">
+							<div class="row">
+								<div class="col-lg-3 col-md-3 col-sm-4">
+                                    <div class="logo-area" style="margin-top: 3px;">
+                                        <a th:href="@{${site_prefix} + '/index'}"><img class="img-responsive" th:src="${resources_path} + '/mitlib/img/icon/logo-03.png'" alt="logo" height="48" style="height: 48px;"/></a>
+									</div>
+									<div class="category-menu-area" id="category-menu-area">
+										<h2 class="category-menu-title"><a href="#"><i class="fa fa-bars" aria-hidden="true"></i></a>Categories</h2>
+                                        <ul class="category-menu-area-inner" style="text-transform: none;">
+                                            <li th:each="cate:${cates}" th:if="${cate.path == ''}">
+                                                <a th:href="@{${site_prefix} + '/product/group/' + ${cate.id}(groupOption=${categoryGroupOption})}" style="font-size: 12px;">
+                                                    <i class="fa fa-circle-o" style="margin-bottom: -3px;"></i><span style="position: inherit;" th:text="${cate.name}" th:remove="tag"></span>
+                                                    <span th:if="${cate.subCategories != null and #lists.size(cate.subCategories) > 0}"><i class="flaticon-next"></i></span>
+                                                </a>
+                                                <ul class="dropdown-menu" th:if="${cate.subCategories != null and #lists.size(cate.subCategories) > 0}">
+													<li th:each="sub:${cate.subCategories}"><a th:href="@{${site_prefix} + '/product/group/' + ${sub.id}(groupOption=${categoryGroupOption})}" th:text="${sub.name}"></a></li>
+												</ul>
+											</li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-lg-9 col-md-9 col-sm-8">
+									<div class="main-menu-area">
+										<nav>
+											<ul>
+												<li th:class="${isHome} ? 'active'"><a th:href="@{${site_prefix} + '/index'}">Home</a></li>
+												<li th:class="${isProduct} ? 'active'"><a th:href="@{${site_prefix} + '/product'}">Products</a></li>
+												<li th:class="${isWishlist} ? 'active'"><a th:href="@{${site_prefix} + '/wishlist'}">Wish List</a></li>
+                                                <li th:class="${isCart} ? 'active'"><a th:href="@{${site_prefix} + '/cart'}">Cart</a></li>
+                                                <li th:class="${isCheckout} ? 'active'"><a th:href="@{${site_prefix} + '/checkout'}">Checkout</a></li>
+												<li th:class="${isSupport} ? 'active'"><a th:href="@{${site_prefix} + '/contactus'}">Contact</a></li>
+											</ul>
+										</nav>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Mobile Menu Area Start Here -->
+						<div class="mobile-menu-area">
+							<div class="container">
+								<div class="row">
+									<div class="col-md-12">
+										<div class="mobile-menu">
+											<nav id="dropdown">
+												<ul>
+													<li class="active"><a onclick="openSearchModal()">Search</a></li>
+													<li class="active"><a th:href="@{${site_prefix} + '/index'}">Home</a></li>
+													<li><a th:href="@{${site_prefix} + '/product'}">Products</a>
+                                                        <ul>
+                                                            <li th:each="cate: ${cates}">
+                                                                <a th:href="@{${site_prefix} + '/product/group/' + ${cate.id}(groupOption=${categoryGroupOption})}" th:text="${cate.name}"></a>
+                                                            </li>
+														</ul>
+                                                    </li>
+													<li><a th:href="@{${site_prefix} + '/wishlist'}">Wish List (<span class="wishlist-count number" th:text="${profile.totalWishList}"></span>)</a></li>
+                                                    <li><a th:href="@{${site_prefix} + '/cart'}">Cart (<span class="cartItemCount number" th:text="${profile.cartSize}"></span>)</a></li>
+                                                    <li><a th:href="@{${site_prefix} + '/checkout'}">Checkout (<span class="cartItemCount number" th:text="${profile.cartSize}"></span>)</a></li>
+													<li><a th:href="@{${faq}}">FAQs</a></li>
+													<li><a th:href="@{${site_prefix} + '/contactus'}">Contact</a></li>
+                                                    
+                                                    <ul th:if="${profile.logged}" th:remove="tag">
+	                                                    <li class=""><a th:href="@{${site_prefix} + '/profile'}">My Account ( <span th:text="${profile.firstName + ' ' + profile.lastName}"></span> )</a></li>
+														<li th:if="${profile.profileType == emailLogin}"><a th:href="@{${site_prefix} + '/profile/password'}">Change Password</a></li>
+														<li><a th:href="@{${site_prefix} + '/address/billingAddress'}">Billing Address</a></li>
+	                                                    <li><a th:href="@{${site_prefix} + '/address/shippingAddress'}">Shipping Address</a></li>
+	                                                    <li><a th:href="@{${site_prefix} + '/order'}">Order History</a></li>
+														<li><a th:href="@{${site_prefix} + '/logout'}">Logout</a></li>
+													</ul>
+                                                    <ul th:if="${profile.logged == false}" th:remove="tag">
+														<li><a th:href="@{${site_prefix} + '/login'}">Login</a></li>
+														<li><a th:href="@{${site_prefix} + '/register'}">Register</a></li>
+													</ul>
+                                                    <!-- <li th:if="${isLogin}"><a th:href="@{${site_prefix} + '/forgotpassword'}">Forgotten Password</a></li> -->
+												</ul>
+											</nav>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<!-- Mobile Menu Area End Here -->
+					</div>
+				</div>
+	        </header>
+	        <!-- Header Area End Here -->
+			
+            <div layout:fragment="content">
+			</div>
+            
+			<!-- Footer Area Start Here -->
+	        <footer>
+				<div class="footer-area">
+					<div class="footer-area-top">
+						<div class="container">
+							<div class="row">
+                                <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+									<div class="footer-box">
+										<h3>About Us</h3>
+                                        <p>Vietnails is a one stop shop for all your nail/Nail art product needs. All our products are carefully picked and only sell the best products in the market. We're SWAROVSKI AUTHORIZED RESELLER. We love all things revolving around or for nails and hope to share our exclusive products with you through our shop.</p>
+									</div>
+								</div>
+								<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+									<div class="footer-box">
+										<h3>Information</h3>
+										<ul class="info-list">
+											<li><a th:href="@{${site_prefix} + '/contactus'}">Contact us</a></li>
+											<li><a th:href="@{${termOfUse}}">Terms of use</a></li>
+                                            <li><a th:href="@{${privacyPolicy}}">Privacy policy</a></li>
+											<li><a th:href="@{${deliveryPolicy}}">Delivery policy</a></li>
+                                            <li><a th:href="@{${refundPolicy}}">Refund Policy</a></li>
+											<li><a th:href="@{${faq}}">FAQs</a></li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+									<div class="footer-box">
+										<h3>My Account</h3>
+										<ul class="info-list">
+											<li><a th:href="@{${site_prefix} + '/profile'}">My Account</a></li>
+                                            <!--<li><a th:href="@{${site_prefix} + '/account/password">Change Password</a></li>-->
+                                            <li><a th:href="@{${site_prefix} + '/address/billingAddress'}">Billing Address</a></li>
+                                            <li><a th:href="@{${site_prefix} + '/address/shippingAddress'}">Shipping Address</a></li>
+                                            <li><a th:href="@{${site_prefix} + '/order'}">Order History</a></li>
+											<li><a th:href="@{${site_prefix} + '/wishlist'}">Wish List</a></li>
+                                            <li><a th:href="@{${site_prefix} + '/cart'}">Cart</a></li>
+                                            <li><a th:href="@{${site_prefix} + '/checkout'}">Checkout</a></li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
+									<div class="footer-box">
+										<h3>Stay With Us</h3>
+                                        
+                                       <!--  <div class="newsletter-area">
+                                            <p style="">Download Mobile Application.</p>
+                                            <span class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                                                <a th:href="@{https://play.google.com/store/apps/details(id=com.mit.thienkimstore,hl=en)}" class="" target="_blank"><img th:src="${resources_path} + '/mitlib/img/google-play.png'" alt="Google Play"/></a>
+                                            </span>
+                                            <span class="col-lg-12 col-md-12 col-sm-12 col-xs-12" style="margin-top: 5px;">
+                                                <a th:href="@{https://itunes.apple.com/us/app/thienkim-store/id1182298508(mt=8)}" class="" target="_blank"><img th:src="${resources_path} + '/mitlib/img/apple-store.png'" alt="Apple Store" style=""/></a>
+                                            </span>
+                                        </div> -->
+                                        <div class="clearfix"></div>
+                                        <p style="margin-top: 10px;">Connect with us via social networks.</p>
+										<ul class="footer-social">
+                                            <li><a target="_blank" href="https://www.facebook.com/vietnailshop/" ><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
+                                            <li><a target="_blank" href="https://www.instagram.com/vietnails_/" ><i class="fa fa-instagram" aria-hidden="true"></i></a></li>
+											<!-- <li><a target="_blank" href="#"><i class="fa fa-twitter" aria-hidden="true"></i></a></li>
+                                            <li><a href="#"><i class="fa fa-google-plus" aria-hidden="true"></i></a></li> -->
+										</ul>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="footer-area-bottom">
+						<div class="container">
+							<div class="row">
+								<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">
+									<p>Copyright © 2017 VietNails All Rights Reserved.</p>
+								</div>
+								<div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+									<ul class="payment-method">
+									<li><a href="#"><img th:src="${resources_path} + '/mitlib/img/payment/paypal-curved-32px.png'" alt="payment-method"/></a></li>
+										<li><a href="#"><img th:src="${resources_path} + '/mitlib/img/payment/american-express-curved-32px.png'" alt="payment-method"/></a></li>
+										<li><a href="#"><img th:src="${resources_path} + '/mitlib/img/payment/mastercard-curved-32px.png'" alt="payment-method"/></a></li>
+										<li><a href="#"><img th:src="${resources_path} + '/mitlib/img/payment/visa-curved-32px.png'" alt="payment-method"/></a></li>
+										<li><a href="#"><img th:src="${resources_path} + '/mitlib/img/payment/discover-curved-32px.png'" alt="payment-method"/></a></li>
+									</ul>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+	        </footer>
+	        <!-- Footer Area End Here -->
+		</div>
+		<!-- Modal Dialog Box Start Here-->
+        <div id="productModalId" class="modal fade" role="dialog" style="top: 10%;">
+		  	<div class="modal-dialog">
+                <div class="modal-body" id="productModalBodyId">
+					<button type="button" class="close myclose" data-dismiss="modal">&times;</button>
+					<div class="product-details1-area" style="padding-bottom: 20px;">
+					    <div class="container" th:if="${sku != null}">
+					        <div class="row">
+					            <div class="col-lg-4 col-md-4 col-sm-12 col-xs-12">
+					                <div class="inner-product-details-left">
+					                    <div class="tab-content">
+					                        <div class="tab-pane fade active in" th:id="${sku.primaryPhotoId}">
+					                            <a href="#" class="zoom ex1"><img alt="single" th:src="${sku.primaryPhoto}" class="img-responsive" /></a>
+					                        </div>
+					                    </div>
+					                    <ul>
+					                        <li class="active"><a th:href="${'#' + sku.primaryPhotoId}" data-toggle="tab" aria-expanded="false"><img alt="related1" th:src="${sku.primaryPhoto}" class="img-responsive" width="65" height="65" /></a></li>
+					                    </ul>
+					                </div>
+					            </div>
+								<div class="col-lg-8 col-md-8 col-sm-12 col-xs-12">
+					                <div class="inner-product-details-right">
+					                    <h3 th:text="${sku.name}"></h3>
+					                    <div class="product-details-content" style="margin-top: 15px; margin-bottom: 0px;">
+					                        <p><span>Availability:</span> In stock</p>
+					                        <p><span>Model:</span><span th:text="${sku.model}" th:remove="tag"></span> </p>
+					                    </div>
+					                    <p th:text="${sku.desc}"></p>
+					                    <p class="price">
+					                    	<span style="color: #727272; text-decoration: line-through;" th:if="${sku.retailPrice > sku.salePrice}" class="money" th:text="${sku.retailPrice}"></span> <span class="money" th:text="${sku.salePrice}"></span></p>
+					                    <ul class="inner-product-details-cart">
+					                        <li><a title="Add to cart" th:onclick="'addToCart(' + ${sku.id}+ ',' + '1' + ',\'' + ${sku.name} + '\')'">Add To Cart</a></li>
+					                        <li>
+					                            <div class="input-group quantity-holder" id="quantity-holder">
+					                                <input id="quantityInput_{{ID}}" type="text" name='quantity' class="form-control quantity-input" value="1" placeholder="1" onchange="changePdQtt(this); return false;" />
+					                                <div class="input-group-btn-vertical">
+					                                    <button class="btn btn-default quantity-plus" type="button"><i class="fa fa-plus" aria-hidden="true"></i></button>
+					                                    <button class="btn btn-default quantity-minus" type="button"><i class="fa fa-minus" aria-hidden="true"></i></button>
+					                                </div>
+					                            </div>
+					                        </li>
+					                        <li><a th:onclick="'addToWishlist(' + ${sku.id} + ',\'' + ${sku.name} + '\')'"><i aria-hidden="true" class="fa fa-heart-o"></i></a></li>
+					                    </ul>
+					                </div>
+					            </div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<a class="btn-services-shop-now" data-dismiss="modal">Close</a>
+				</div>
+		    </div>
+		</div>
+		<!-- Modal Dialog Box End Here-->
+		<!-- Modal Search Start Here-->
+        <div id="searchModalId" class="modal fade" role="dialog" style="top: 10%;">
+		  	<div class="modal-dialog">
+                <div class="modal-body">
+                	<form id="searchFrm2Id">
+						<div class="search-area">
+							<div class="form-group">
+                                <select  id="cate2SltId" size="1" class="form-control" style="text-align: center; height: 34px">
+                                    <option value="0" style="text-align: center;">All Categories</option>
+                                    <option style="text-align: center;" th:each="cate: ${cates}" th:value="${cate.id}" th:text="${cate.name}" th:selected="${cate.name == categorySelectName} ? selected"></option>
+                                </select>
+	                        </div>
+							<div class="form-group">
+								<input id="q2IptId" type="text" class="form-control" placeholder="Name" th:value="${q}" style="height: 34px"/>
+							</div>
+                            <div class="form-group">
+                                <button id="search2BtnId" type="button" class="btn" style="width:100%; height:34px"><span class="glyphicon glyphicon-search" aria-hidden="true"></span></button>
+                            </div>
+						</div>
+                    </form>
+				</div>
+				<div class="modal-footer">
+					<a class="btn-services-shop-now" data-dismiss="modal">Close</a>
+				</div>
+		    </div>
+		</div>
+		<!-- Modal Search End Here-->
+        <div id="loadingModal" style="display:none;">
+            <div class="modal-center">
+                <img alt="" th:src="${resources_path} + '/mitlib/img/loader.gif'"/>
+            </div>
+        </div>
+        
+		<!-- Preloader Start Here -->
+	    <div id="preloader1"></div>
+	</div>
+</body>
+
+</html>

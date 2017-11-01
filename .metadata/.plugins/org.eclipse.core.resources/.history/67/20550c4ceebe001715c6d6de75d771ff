@@ -1,0 +1,57 @@
+package com.mit.responses;
+
+import java.util.List;
+
+import com.mit.product.responses.SkuShortResponse;
+
+public class ProductListResponse {
+	private List<SkuShortResponse> skus;
+	private boolean hasMore;
+	private String groupName;
+	private long groupId;
+
+	public ProductListResponse() {
+		super();
+	}
+
+	public ProductListResponse(List<SkuShortResponse> skus, boolean hasMore, String groupName, long groupId) {
+		super();
+		this.skus = skus;
+		this.hasMore = hasMore;
+		this.groupName = groupName;
+		this.groupId = groupId;
+	}
+
+	public List<SkuShortResponse> getSkus() {
+		return skus;
+	}
+
+	public void setSkus(List<SkuShortResponse> skus) {
+		this.skus = skus;
+	}
+
+	public boolean isHasMore() {
+		return hasMore;
+	}
+
+	public void setHasMore(boolean hasMore) {
+		this.hasMore = hasMore;
+	}
+
+	public String getGroupName() {
+		return groupName;
+	}
+
+	public void setGroupName(String groupName) {
+		this.groupName = groupName;
+	}
+
+	public long getGroupId() {
+		return groupId;
+	}
+
+	public void setGroupId(long groupId) {
+		this.groupId = groupId;
+	}
+
+}

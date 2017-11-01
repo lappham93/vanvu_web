@@ -1,0 +1,315 @@
+package com.mit.controllers;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.mit.common.Paging;
+import com.mit.errcode.ProductErrCode;
+import com.mit.product.entities.Brand;
+import com.mit.product.entities.Category;
+import com.mit.product.entities.ComboSku;
+import com.mit.product.entities.Product;
+import com.mit.product.entities.ProductOption;
+import com.mit.product.entities.ProductOptionValue;
+import com.mit.product.entities.Sku;
+import com.mit.product.enums.ProductOptionType;
+import com.mit.product.enums.SkuSortOption;
+import com.mit.product.repositories.BrandRepo;
+import com.mit.product.repositories.CategoryRepo;
+import com.mit.product.repositories.ProductOptionRepo;
+import com.mit.product.repositories.ProductOptionValueRepo;
+import com.mit.product.repositories.ProductRepo;
+import com.mit.product.repositories.SkuRepo;
+import com.mit.product.responses.BrandResponse;
+import com.mit.product.responses.CategoryResponse;
+import com.mit.product.responses.ProductOptionValueResponse;
+import com.mit.product.responses.SkuOptionValue;
+import com.mit.product.responses.SkuResponse;
+import com.mit.product.responses.SkuShortResponse;
+import com.mit.product.services.ProductService;
+import com.mit.responses.ProductListResponse;
+import com.mit.session.entities.UserSession;
+import com.mit.user.enums.ProfileType;
+import com.mit.utils.ControllerUtils;
+import com.mit.utils.SiteConstant;
+
+import io.swagger.annotations.ApiOperation;
+
+@Controller
+@RequestMapping(value = "/product")
+public class ProductController {
+	private final int brandGroup = 2;
+	
+	@Autowired
+	private ProductService productService;
+	@Autowired
+	private CategoryRepo cateRepo;
+	@Autowired
+	private BrandRepo brandRepo;
+	@Autowired
+	private SkuRepo skuRepo;
+	@Autowired
+	private ProductRepo productRepo;
+	@Autowired
+	private ProductOptionRepo productOptionRepo;
+	@Autowired
+	private ProductOptionValueRepo productOptionValueRepo;
+	
+	@SuppressWarnings("unchecked")
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderProductList(HttpServletRequest req, Model model,
+			@RequestParam(value = "group", required = false, defaultValue = "1") int groupOption,
+			@RequestParam(value = "q", required = false, defaultValue = "") String q,
+			@RequestParam(value = "category", required = false, defaultValue = "0") int categoryId) {
+		
+		ModelAndView mav = ControllerUtils.initPage("product_list", null, "isProduct");
+		long userId = 0;
+		int profileType = ProfileType.CLIENT.getValue();
+        if (req.getAttribute("session") != null) {
+        	UserSession userSession = (UserSession) req.getAttribute("session");
+            userId = userSession.getUserId();
+            profileType = userSession.getProfileType();
+        }
+        
+        List<ProductListResponse> groups = new LinkedList<>();
+		if (categoryId > 0) {
+			Category cate = cateRepo.getById(categoryId);
+			ProductListResponse group = new ProductListResponse();
+        	group.setGroupId(cate.getId());
+        	group.setGroupName(cate.getName());
+        	 Map<String, Object> skuMap = productService.getListSku(userId, profileType, 0, cate.getId(), 0, null, q, false, 1, SiteConstant.pageSizeMore, "", SkuSortOption.DEFAULT);
+			 int err = (int) skuMap.get("err");
+			 if (err == ProductErrCode.SUCCESS) {
+				 List<SkuShortResponse> skus = (List<SkuShortResponse>) skuMap.get("skus");
+				 boolean hasMore = (boolean) skuMap.get("hasMore");
+				 group.setSkus(skus);
+				 group.setHasMore(hasMore);
+			 }
+			 if (!CollectionUtils.isEmpty(group.getSkus())) {
+				 groups.add(group);
+			 }
+			 mav.addObject("categorySelectId", categoryId);
+			 mav.addObject("categorySelectName", cate.getName());
+//		} else if (groupOption == brandGroup) {
+//			 List<Brand> brands = brandRepo.getList(true);
+//			 if (brands != null) {
+//				 for (Brand brand: brands) {
+//					 ProductListResponse group = new ProductListResponse();
+//					 group.setGroupId(brand.getId());
+//					 group.setGroupName(brand.getName());
+//					 Map<String, Object> skuMap = productService.getListSku(userId, profileType, 0, categoryId, brand.getId(), null, q, false, 1, SiteConstant.pageSize, "", SkuSortOption.DEFAULT);
+//					 int err = (int) skuMap.get("err");
+//					 if (err == ProductErrCode.SUCCESS) {
+//						 List<SkuShortResponse> skus = (List<SkuShortResponse>) skuMap.get("skus");
+//						 boolean hasMore = (boolean) skuMap.get("hasMore");
+//						 group.setSkus(skus);
+//						 group.setHasMore(hasMore);
+//					 }
+//					 if (!CollectionUtils.isEmpty(group.getSkus())) {
+//						 groups.add(group);
+//					 }
+//				 }
+//			 }
+		} else {
+//			Map<String, Object> cateMap = productService.getCategory(Calendar.getInstance().getTime());
+//			List<CategoryResponse> cateSource = (List<CategoryResponse>)cateMap.get("categories");
+	        List<CategoryResponse> cates = (List<CategoryResponse>)model.asMap().get("cates");
+//	        visitCategory(cateSource, cates, null);
+	        for (CategoryResponse cate: cates) {
+	        	ProductListResponse group = new ProductListResponse();
+	        	group.setGroupId(cate.getId());
+	        	group.setGroupName(cate.getName());
+	        	try {
+	        	 Map<String, Object> skuMap = productService.getListSku(userId, profileType, 0, cate.getId(), 0, null, q, false, 1, SiteConstant.pageSize, "", SkuSortOption.DEFAULT);
+				 int err = (int) skuMap.get("err");
+				 if (err == ProductErrCode.SUCCESS) {
+					 List<SkuShortResponse> skus = (List<SkuShortResponse>) skuMap.get("skus");
+					 boolean hasMore = (boolean) skuMap.get("hasMore");
+					 group.setSkus(skus);
+					 group.setHasMore(hasMore);
+				 }
+				 if (!CollectionUtils.isEmpty(group.getSkus())) {
+					 groups.add(group);
+				 }
+	        	} catch (Exception e) {
+	        		System.out.println("cateId = " + cate.getId());
+	        	}
+	        }
+		}
+		mav.addObject("q", q);
+		mav.addObject("groups", groups);
+        
+		return mav;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@RequestMapping(value = "/group/{groupId}", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderProductInGroup(HttpServletRequest req,
+			@PathVariable(value = "groupId") long groupId,
+			@RequestParam(value = "page", required = false, defaultValue = "1") int page,
+			@RequestParam(value = "groupOption", required = false, defaultValue = "1") int groupOption) {
+		
+		ModelAndView mav = ControllerUtils.initPage("product_group", null, "isProduct");
+		long userId = 0;
+		int profileType = ProfileType.CLIENT.getValue();
+        if (req.getAttribute("session") != null) {
+        	UserSession userSession = (UserSession) req.getAttribute("session");
+            userId = userSession.getUserId();
+            profileType = userSession.getProfileType();
+        }
+        long brandId = 0;
+        int categoryId = 0;
+        if (groupOption == brandGroup) {
+        	brandId = groupId;
+        } else {
+        	categoryId = (int)groupId;
+        }
+        
+        Paging paging = new Paging();
+    	paging.setNumDisplay(SiteConstant.numDisplay);
+    	paging.setPageSize(SiteConstant.pageSize);
+        paging.setTotalRecord(productService.countSku(0, categoryId, brandId, null, "", false));
+        int totalPages = paging.getTotalPage();
+		paging.setCurrentPage(Paging.clamp(page, 1, totalPages));
+		
+        ProductListResponse group = new ProductListResponse();
+        if (categoryId > 0 || brandId > 0) {
+			Map<String, Object> rs = productService.getListSku(userId, profileType, 0, categoryId, brandId, null, "", false, paging.getCurrentPage(), paging.getPageSize(), "", SkuSortOption.DEFAULT);
+	        List<SkuShortResponse> skus = (List<SkuShortResponse>)rs.get("skus");
+	        group.setSkus(skus);
+			if (categoryId > 0) {
+				Category cate = cateRepo.getById(categoryId);
+				group.setGroupName(cate.getName());
+				group.setGroupId(cate.getId());
+			} else {
+				Brand brand = brandRepo.getById(brandId);
+				group.setGroupName(brand.getName());
+				group.setGroupId(brand.getId());
+			}
+		}
+        mav.addObject("group", group);
+        mav.addObject("paging", paging);
+        mav.addObject("params", ControllerUtils.buildParam(req, Arrays.asList("page")));
+        
+		return mav;
+	}
+	
+	@RequestMapping(value = "/detail/{id}", method = RequestMethod.GET)
+	@ModelAttribute
+	public ModelAndView renderProductDetail(HttpServletRequest req,
+			@PathVariable(value = "id") long skuId) {
+		
+		ModelAndView mav = ControllerUtils.initPage("product_detail", null, "isProduct");
+		int profileType = ProfileType.CLIENT.getValue();
+        if (req.getAttribute("session") != null) {
+        	UserSession userSession = (UserSession) req.getAttribute("session");
+            profileType = userSession.getProfileType();
+        }
+        
+        Sku sku = skuRepo.getById(skuId);
+		Product product = productRepo.getById(sku.getProductId());
+		Brand brand = brandRepo.getById(product.getBrandId());
+		BrandResponse brandRes = brand != null ? new BrandResponse(brand) : null;
+		SkuResponse skuRes = null;
+		if (sku instanceof ComboSku) {
+			ComboSku combosku = (ComboSku) sku;
+			Map<Long, SkuShortResponse> skuMap = new HashMap<>();
+			List<SkuShortResponse> skuItems = productService.getSkuShortResponse(combosku.getSkuIds(), profileType);
+			if (skuItems != null) {
+				skuItems.forEach(t -> skuMap.put(t.getId(), t));
+			}
+			skuRes = new SkuResponse(combosku, product, brandRes, null, null, null, null, null, profileType, skuMap);
+		} else {
+			skuRes = new SkuResponse(sku, product, brandRes, null, null, null, null, null, profileType);
+		}
+		List<SkuShortResponse> similars = productService.getSkuShortResponse(sku.getSimilarSkuIds(), profileType);
+		// product option
+		if (!CollectionUtils.isEmpty(sku.getProductOptionValueIds()) && !CollectionUtils.isEmpty(product.getProductOptionIds())) {
+			List<ProductOptionValue> povs = productOptionValueRepo.getListByIds(sku.getProductOptionValueIds());
+			if (povs != null) {
+				Map<Integer, ProductOption> poMap = productOptionRepo.getMapByIds(product.getProductOptionIds());
+				for (ProductOptionValue pov: povs) {
+					ProductOption po = poMap.get(pov.getProductOptionId());
+					if (po != null) {
+						List<ProductOptionValue> otherPovs = productOptionValueRepo.getListByProductOption(Arrays.asList(po.getId()));
+						if (otherPovs != null) {
+							Map<Integer, ProductOptionValue> otherPovIdMap = new HashMap<>();
+							otherPovs.forEach(t -> otherPovIdMap.put(t.getId(), t));
+							List<Sku> otherSkus = skuRepo.getListByOptionValue(product.getId(), otherPovIdMap.keySet());
+							List<SkuOptionValue> skuOvs = new LinkedList<>();
+							if (otherSkus != null) {
+								for (Sku os: otherSkus) {
+									for (int povId: os.getProductOptionValueIds()) {
+										if (otherPovIdMap.containsKey(povId)) {
+											skuOvs.add(new SkuOptionValue(os, new ProductOptionValueResponse(otherPovIdMap.get(povId))));
+											break;
+										}
+									}
+								}
+							}
+							if (po.getType() == ProductOptionType.COLOR.getValue()) {
+								mav.addObject("color", skuOvs);
+							} else if (po.getType() == ProductOptionType.SIZE.getValue()) {
+								mav.addObject("size", skuOvs);
+							}
+						}
+					}
+				}
+			}
+		}
+		mav.addObject("sku", skuRes);
+		mav.addObject("similars", similars);
+		return mav;
+	}
+	
+	@ApiOperation(value = "Get product detail", notes = "Error codes = {PRODUCT_NOT_EXIST(-321)};")
+	@RequestMapping(value = "/item/detail/{id}", method = RequestMethod.GET)
+	public ModelAndView renderProductModal(HttpServletRequest req,
+			@PathVariable(value = "id") long skuId) {
+		
+		ModelAndView mav = ControllerUtils.initPage("product_detail_mini", null, "");
+		int profileType = ProfileType.CLIENT.getValue();
+		if (req.getAttribute("session") != null) {
+			UserSession userSession = (UserSession) req.getAttribute("session");
+		    profileType = userSession.getProfileType();
+		}
+		Sku sku = skuRepo.getById(skuId);
+		Product product = productRepo.getById(sku.getProductId());
+		Brand brand = brandRepo.getById(product.getBrandId());
+		BrandResponse brandRes = brand != null ? new BrandResponse(brand) : null;
+		SkuResponse skuRes = null;
+		if (sku instanceof ComboSku) {
+			ComboSku combosku = (ComboSku) sku;
+			Map<Long, SkuShortResponse> skuMap = new HashMap<>();
+			List<SkuShortResponse> skuItems = productService.getSkuShortResponse(combosku.getSkuIds(), profileType);
+			if (skuItems != null) {
+				skuItems.forEach(t -> skuMap.put(t.getId(), t));
+			}
+			skuRes = new SkuResponse(combosku, product, brandRes, null, null, null, null, null, profileType, skuMap);
+		} else {
+			skuRes = new SkuResponse(sku, product, brandRes, null, null, null, null, null, profileType);
+		}
+		mav.addObject("sku", skuRes);
+		
+		return mav;
+	}
+	
+}

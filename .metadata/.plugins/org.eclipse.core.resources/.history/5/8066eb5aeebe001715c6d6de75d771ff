@@ -1,0 +1,9 @@
+package com.mit.utils;
+
+import com.mit.configer.ConfigUtils;
+
+public class SiteConstant {
+	public static final int pageSize = ConfigUtils.getConfig().getInt("site.paging.pageSize", 12);
+	public static final int pageSizeMore = ConfigUtils.getConfig().getInt("site.paging.pageSize", 30);
+	public static final int numDisplay = ConfigUtils.getConfig().getInt("site.paging.numDisplay", 3);
+}

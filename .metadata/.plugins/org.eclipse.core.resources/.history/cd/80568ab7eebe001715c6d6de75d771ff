@@ -1,0 +1,170 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/web/thymeleaf/layout"
+	layout:decorator="layout">
+
+<head>
+	<script type="text/javascript" th:src="${resources_path} + '/custom/js/billing_address.js'"></script>
+	<style type="text/css">
+		form select {
+			height: 34px !important;
+		}
+	</style>
+	
+	<script th:inline="javascript">
+		/*<![CDATA[*/
+			defaultAddressId = [[${defaultAddressId}]];
+		/*]]>*/
+	</script>
+</head>
+<body>
+	<div layout:fragment="content">
+		
+		<div class="inner-page-banner-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                <div class="pagination-area">
+		                    <h2>My Account</h2>
+		                    <ul>
+		                        <li><a th:href="@{${site_prefix} + '/index'}">Home</a> /</li>
+		                        <li><a th:href="@{${site_prefix} + '/profile'}">Account</a> /</li>
+		                        <li>Billing Address</li>
+		                    </ul>
+		                </div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		
+		
+		<div class="product-details1-area">
+		    <div class="container">
+		        <div class="row">
+		            <div class="col-lg-9 col-md-9 col-sm-12 col-xs-12 col-md-push-3">
+		                <div class="inner-shop-details">
+		                    <div class="product-details-info-area">
+		                        <div class="row">
+		                            <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		                                <div th:if="${address.addresses == null or #lists.size(address.addresses) == 0}">
+			                                <div class="form-group">
+			                                    <h3><span>Billing Address</span></h3>
+			                                </div>
+			                                <p style="margin: 20px 10px;">You have not yet added any addresses to your account. Start by adding one below.</p>
+			                                <div class="clearfix"></div>
+		                                </div>
+		
+		                                <!-- start form -->
+		                                <form id="addBAFrmId" class="form-horizontal">
+		                                    <div th:if="${address.addresses != null and #lists.size(address.addresses) > 0}">
+			                                    <div class="form-group">
+			                                        <h3 class="col-sm-3" style="display: inline;"><span>Billing Address</span></h3>
+			                                        <!-- <span class="col-sm-6" style="text-align: end; display: inline; text-decoration: underline; padding-top: 23px"> 
+			                                            <a style="font-weight: bold;" onclick="switchAddBillingAddress()">Create a new billing address</a>
+			                                        </span> -->
+			                                    </div>
+			                                    <div class="clearfix"></div>
+			                                    <div class="form-horizontal">
+			                                        <div class="form-group">
+			                                            <label for="billingAddressId" class="col-sm-3 control-label"> <span>Options</span></label>
+			                                            <div class="col-sm-6">
+			                                                <select id="billingAddressSltId" name="billingAddressId" class="form-control" style="text-align: center;">
+			                                                    <option value="" style="text-align: center;" selected="selected">Create new address</option>
+			                                                    <option style="text-align: center;" th:each="add: ${address.addresses}" th:value="${add.id}" th:text="${add.firstName + add.lastName}" th:selected="${add.id == address.defaultId} ? selected"></option>
+			                                                </select>
+			                                            </div>
+			                                        </div>
+			                                    </div>
+		                                    </div>
+		                                    <div>
+		                                        <div class="form-group">
+		                                            <label for="firstName" class="col-sm-3 control-label"><span>First Name <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="firstNameIptId" name="firstName" value="" required="required" />
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="lastName" class="col-sm-3 control-label"><span>Last Name<b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="lastNameIptId" name="lastName" value="" required="required"/>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="phone" class="col-sm-3 control-label"><span>Phone <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="tel" id="phoneIptId" name="phone" class="form-control" value="" required="required"/>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="address1" class="col-sm-3 control-label"><span>Address 1 <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="address1IptId" name="address1" value="" required="required"/>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="address2" class="col-sm-3 control-label"><span>Address 2</span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="address2IptId" name="address2" value="" />
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="country" class="col-sm-3 control-label"><span>Country <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <select id="countrySltId" size="1" class="form-control" style="text-align: center;" name="countryCode" required="required" data-placeholder="Select country">
+						                                    <option disabled="disabled" selected="selected" value="" >Select country</option>
+						                                    <option style="text-align: center;" th:each="country: ${countries}" th:value="${country.isoCode}" th:text="${country.name}" th:selected="${country.isoCode == defaultCountry} ? selected"></option>
+		                                                </select>
+		                                            </div>
+		                                        </div>
+		                                        <div id="stateGroup" class="form-group">
+		                                            <label for="city" class="col-sm-3 control-label"><span>State <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <select id="stateSltId" class="form-control" style="text-align: center;" name="state" required="required" data-placeholder="Select state">
+		                                                </select>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="city" class="col-sm-3 control-label"><span>City <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="cityIptId" name="city" value="" required="required"/>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                            <label for="zipCode" class="col-sm-3 control-label"><span>Zip Code <b style="color: red;">*</b></span></label>
+		                                            <div class="col-sm-6">
+		                                                <input type="text" class="form-control" id="zipCodeIptId" name="zipCode" required="required"/>
+		                                            </div>
+		                                        </div>
+		                                        <div class="form-group">
+		                                        	<div class="col-sm-12 col-sm-offset-3">
+			                                 			<input type="checkbox" style="width: 14px; display: inline; margin-top: 11px" id="defaultCbxId" name="default" value="true" />
+			                                            <label for="default" class="control-label" style="display: inline;"><span>Make Default</span></label>
+		                                       		</div>
+		                                        </div>
+		                                        <input type="hidden" id="addressIdIptId" value = ""/>
+		                                        <div class="clearfix"></div>
+		                                    </div>
+		                                    <div class="form-group" id="addDivId">
+		                                        <div class="col-sm-offset-3 col-sm-9">
+		                                            <input type="submit" class="btn btn-primary" value="Create New Address" />
+		                                        </div>
+		                                    </div>
+		                                    <div class="form-group" id="updateDivId" hidden="true">
+		                                        <div class="col-sm-offset-3 col-sm-9">
+		                                            <input class="btn btn-primary" value="Update Address" type="submit" />
+		                                            <input class="btn btn-primary" id="deleteBtnId" type="button" value="Remove" />	
+		                                        </div>
+		                                    </div>
+		                                </form>
+		                                
+		                            </div>
+		                        </div>
+		                    </div>
+		                    
+		                </div>
+		            </div>
+		            <div th:replace="fragments :: profile_navigation(active='billingAddress')"></div>						
+		        </div>
+		    </div>
+		</div>
+	</div>
+</body>
+</html>
